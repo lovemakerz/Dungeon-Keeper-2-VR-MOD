@@ -62,8 +62,18 @@
 using Microsoft::WRL::ComPtr;
 using namespace dk2vr;
 
+// 0.8.0: entry stub of the engine's primitive setup 0x58A970 (see EngineOrigin): hands the stack pointer at entry
+// (return address + the 6 cdecl arguments) to the plugin, then continues into the original code (trampoline) with
+// the stack untouched. Only eax/ecx/edx (free at a cdecl call) are used.
+extern "C" {
+void* dk2vr_beginTramp=nullptr;
+__attribute__((used,force_align_arg_pointer)) void __cdecl dk2vr_beginNote(uint32_t* sp);
+void dk2vr_beginStub();
+}
+asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
+
 namespace {
-constexpr const char* Version="0.7.10";
+constexpr const char* Version="0.8.0";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -772,6 +782,177 @@ struct PauseWatch {
         log("Pause watch: game pause function 0x527270 hooked");
     }
 };
+// 0.8.0: ORIGIN of every 3D piece, read inside the game engine (no screen position / depth guess any more).
+// Verified in the 1.70 exe: every engine primitive (CEngine2D* interface sprites/meshes and CEngine* world meshes,
+// sprites, height fields) starts with the setup 0x58A970 (cdecl, 6 arguments, 16 call sites, all inside the primitive
+// render methods); every 3D vertex is projected by 0x58AF70 or 0x58ADC0 (cdecl: pool index, camera-space point) into
+// the vertex pool 0x76F358 (40 bytes: +0x0C..+0x18 screen x, y, z, rhw copied verbatim into the Direct3D vertex by the
+// triangle writers, e.g. 0x58B574; +0x1C clip code). The 2D interface classes project with 0x58B190 (rhw = 1: flat).
+// The game sets up ONE camera per frame (0x575A00, 1 call per frame in the 0.7.10 log): the interface pieces drawn in
+// 3D use the world camera, and the Direct3D draws come out sorted together with the dungeon (0.7.10 probe: interface
+// pieces between dungeon draws) -> neither screen position, depth nor order can separate them (0.6.9.x-0.7.10 loop).
+// What differs is WHO renders them. At 0x58A970 the caller chain (return addresses on the stack) identifies the
+// origin (id 1..252). The vertices of INTERFACE origins get marker 0x9 + id in the 12 low mantissa bits of their rhw
+// (relative change < 5e-4, invisible); dungeon vertices are left untouched. At the Direct3D draw the mark of each
+// vertex says interface or dungeon, triangle by triangle. Automatic decision (no address list to maintain): a chain frame is an 'interface root' when it renders
+// at least half of the flat 2D interface pieces and at most 10 % of the 3D pieces; a 'world root' renders at least half
+// of the 3D pieces and at most 30 % of the 2D ones. A 3D origin is interface when its chain holds an interface root and
+// no world root. Every doubt (untagged vertex, unknown origin, too many origins) = dungeon: never the other way.
+constexpr int OriginChain=12;
+struct OriginRecord {uint32_t ret0=0;uint32_t chain[OriginChain]{};uint8_t n=0;bool is2D=false,ui=false;uint32_t prims=0,lastPrims=0;uint64_t total=0;
+    uint32_t draws=0,tris=0,uiTris=0;float box[4]={1e9f,1e9f,-1e9f,-1e9f};};
+struct OriginSig {uint32_t hash=0;uint8_t id=0;};
+struct OriginCache {uint32_t ret0=0,sp=0;uint8_t n=0,id=0;uint16_t off[OriginChain]{};uint32_t val[OriginChain]{};};
+struct EngineOrigin {
+    // ids 1..252: recorded origins; 253 / 254: origin table full, decided on the fly (interface / dungeon).
+    static constexpr int MaxChain=OriginChain,MaxIds=253,Pool=1024,FullUi=253,FullWorld=254;
+    using Origin=OriginRecord;using Sig=OriginSig;using Cache=OriginCache;
+    using Proj=uint32_t(__cdecl*)(int,const float*);
+    inline static Origin origins[256];inline static Sig table[1024];inline static Cache cache[128];inline static int used=1;
+    inline static volatile uint8_t current=0;inline static volatile bool uiCurrent=false;
+    inline static uintptr_t k=0,textLo=0,textHi=0,lo2D=0,hi2D=0;
+    inline static bool installed=false,enabled=true,ready=false;
+    inline static Proj projA=nullptr,projB=nullptr;
+    inline static uint64_t begins=0,scans=0,hits=0,tagged=0,overflow=0,valve=0,windows=0,resets=0;
+    inline static std::vector<uint32_t> guiRoots,worldRoots;inline static uint64_t lastTot2=0,lastTot3=0;
+    static bool isRet(uint32_t a) {
+        if(a<textLo+8||a>=textHi) return false;
+        const unsigned char* p=reinterpret_cast<const unsigned char*>(uintptr_t(a));
+        if(p[-5]==0xe8) {int32_t rel;memcpy(&rel,p-4,4);const uint32_t t=a+uint32_t(rel);return t>=textLo&&t<textHi;}
+        if(p[-6]==0xff&&(p[-5]==0x15||(p[-5]&0xf8)==0x90)) return true;
+        if(p[-7]==0xff&&p[-6]==0x94) return true;
+        if(p[-3]==0xff&&(p[-2]&0xf8)==0x50) return true;
+        if(p[-4]==0xff&&p[-3]==0x54) return true;
+        if(p[-2]==0xff&&((p[-1]&0xf8)==0xd0||(p[-1]&0xf8)==0x10)) return true;
+        return false;
+    }
+    static bool has(const Origin& o,const std::vector<uint32_t>& set) {for(int j=0;j<o.n;++j) for(uint32_t a:set) if(o.chain[j]==a) return true;return false;}
+    static void decideOne(Origin& o) {o.ui=!o.is2D&&!guiRoots.empty()&&has(o,guiRoots)&&!has(o,worldRoots);}
+    static uint8_t idFor(uint32_t ret0,const uint32_t* chain,int n) {
+        uint32_t h=2166136261u^ret0;h*=16777619u;for(int j=0;j<n;++j) {h^=chain[j];h*=16777619u;}h^=uint32_t(n);
+        for(int probe=0;probe<1024;++probe) {
+            Sig& s=table[(h+uint32_t(probe))&1023];
+            if(!s.id) {
+                if(used>=MaxIds) break;
+                Origin& o=origins[used];o=Origin{};o.ret0=ret0;o.n=uint8_t(n);for(int j=0;j<n;++j) o.chain[j]=chain[j];
+                o.is2D=ret0>=lo2D&&ret0<hi2D;decideOne(o);s.hash=h;s.id=uint8_t(used);return uint8_t(used++);
+            }
+            if(s.hash==h) {const Origin& o=origins[s.id];if(o.ret0==ret0&&o.n==n&&std::equal(chain,chain+n,o.chain)) return s.id;}
+        }
+        // Table full until the next window: same decision, not recorded.
+        ++overflow;Origin tmp{};tmp.ret0=ret0;tmp.n=uint8_t(n);for(int j=0;j<n;++j) tmp.chain[j]=chain[j];tmp.is2D=ret0>=lo2D&&ret0<hi2D;decideOne(tmp);
+        return uint8_t(tmp.ui?FullUi:FullWorld);
+    }
+    // Game render thread, at every primitive setup (sp: stack at the entry of 0x58A970 = return address + 6 arguments).
+    static void note(uint32_t* sp) {
+        ++begins;
+        const uint32_t ret0=sp[0];const uint32_t* frame=sp+7;const uint32_t fv=uint32_t(uintptr_t(frame));
+        Cache& c=cache[((ret0>>2)^(fv>>2))&127];
+        if(c.ret0==ret0&&c.sp==fv) {
+            bool same=true;for(int j=0;j<c.n&&same;++j) same=frame[c.off[j]]==c.val[j];
+            if(same) {current=c.id;uiCurrent=uiId(c.id);++origins[c.id].prims;++hits;return;}
+        }
+        ++scans;
+        const uintptr_t top=uintptr_t(reinterpret_cast<NT_TIB*>(NtCurrentTeb())->StackBase);
+        const size_t limit=std::min<size_t>(384,top>uintptr_t(frame)?(top-uintptr_t(frame))/4:0);
+        uint32_t chain[MaxChain];uint16_t off[MaxChain];int n=0;
+        for(size_t i=0;i<limit&&n<MaxChain;++i) {
+            const uint32_t v=frame[i];if(!isRet(v)) continue;
+            bool dup=false;for(int j=0;j<n;++j) dup|=chain[j]==v;
+            if(!dup) {chain[n]=v;off[n]=uint16_t(i);++n;}
+        }
+        const uint8_t id=idFor(ret0,chain,n);
+        c.ret0=ret0;c.sp=fv;c.n=uint8_t(n);c.id=id;for(int j=0;j<n;++j) {c.off[j]=off[j];c.val[j]=chain[j];}
+        current=id;uiCurrent=uiId(id);++origins[id].prims;
+    }
+    // After a 3D projection: origin id into the low bits of the pool vertex rhw (only vertices inside the view).
+    // Only INTERFACE origins are marked: the dungeon's vertices stay bit for bit what the game computed (coplanar floor
+    // overlays keep exactly the same depth on the table).
+    static void tag(int idx) {
+        if(!enabled||!uiCurrent||uint32_t(idx)>=uint32_t(Pool)) return;
+        unsigned char* e=reinterpret_cast<unsigned char*>(k+0x76f358)+size_t(idx)*40;
+        uint32_t clip;memcpy(&clip,e+0x1c,4);if(clip) return;
+        uint32_t b;memcpy(&b,e+0x18,4);b=(b&~0xfffu)|0x900u|current;memcpy(e+0x18,&b,4);++tagged;
+    }
+    __attribute__((force_align_arg_pointer)) static uint32_t __cdecl projHookA(int idx,const float* v) {const uint32_t r=projA(idx,v);tag(idx);return r;}
+    __attribute__((force_align_arg_pointer)) static uint32_t __cdecl projHookB(int idx,const float* v) {const uint32_t r=projB(idx,v);tag(idx);return r;}
+    // Vertex of a Direct3D draw: origin id (0 = none / untagged).
+    static int idOf(const unsigned char* vertex) {uint32_t b;memcpy(&b,vertex+12,4);return ((b>>8)&15)==9?int(b&255):0;}
+    static bool uiId(int id) {return id==FullUi||(id>0&&id<used&&origins[id].ui);}
+    static void* detour(uintptr_t at,const unsigned char* sig,size_t n,void* hook) {
+        auto* entry=reinterpret_cast<unsigned char*>(at);
+        if(memcmp(entry,sig,n)) return nullptr;
+        auto* t=static_cast<unsigned char*>(VirtualAlloc(nullptr,32,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE));if(!t) return nullptr;
+        memcpy(t,entry,n);t[n]=0xe9;int32_t back=int32_t(reinterpret_cast<uintptr_t>(entry+n)-reinterpret_cast<uintptr_t>(t+n+5));memcpy(t+n+1,&back,4);
+        DWORD old=0;VirtualProtect(t,32,PAGE_EXECUTE_READ,&old);
+        if(!VirtualProtect(entry,n,PAGE_EXECUTE_READWRITE,&old)) return nullptr;
+        unsigned char jump[8]={0xe9,0,0,0,0,0x90,0x90,0x90};int32_t rel=int32_t(reinterpret_cast<uintptr_t>(hook)-reinterpret_cast<uintptr_t>(entry+5));memcpy(jump+1,&rel,4);
+        memcpy(entry,jump,n);DWORD ig=0;VirtualProtect(entry,n,old,&ig);
+        FlushInstructionCache(GetCurrentProcess(),entry,n);FlushInstructionCache(GetCurrentProcess(),t,32);
+        return t;
+    }
+    static void install(uintptr_t base) {
+        enabled=iniInt(L"InterfaceFromEngine",1)!=0;
+        if(!enabled) {log("Interface origin: off (InterfaceFromEngine=0), 0.7.10 screen rules used");return;}
+        k=base-0x400000;textLo=k+0x401000;textHi=k+0x66c000;lo2D=k+0x5767e0;hi2D=k+0x578d00;
+        const unsigned char sBegin[]={0x83,0xec,0x3c,0x33,0xc9,0x53,0x55},sA[]={0x83,0xec,0x08,0x8b,0x44,0x24,0x10},sB[]={0x51,0x8b,0x4c,0x24,0x0c,0x56};
+        // All three signatures are checked before anything is patched.
+        if(memcmp(reinterpret_cast<void*>(k+0x58a970),sBegin,7)||memcmp(reinterpret_cast<void*>(k+0x58af70),sA,7)||memcmp(reinterpret_cast<void*>(k+0x58adc0),sB,6)) {
+            enabled=false;log("Interface origin: engine signature unsupported, 0.7.10 screen rules used");return;}
+        projA=reinterpret_cast<Proj>(detour(k+0x58af70,sA,7,reinterpret_cast<void*>(&projHookA)));
+        projB=reinterpret_cast<Proj>(detour(k+0x58adc0,sB,6,reinterpret_cast<void*>(&projHookB)));
+        dk2vr_beginTramp=detour(k+0x58a970,sBegin,7,reinterpret_cast<void*>(&dk2vr_beginStub));
+        installed=projA&&projB&&dk2vr_beginTramp;
+        if(!installed) {enabled=false;log("Interface origin: hook failed (begin %p, projections %p %p), 0.7.10 screen rules used",dk2vr_beginTramp,(void*)projA,(void*)projB);return;}
+        log("Interface origin: engine hooks installed (primitive setup 0x58A970, 3D projections 0x58AF70 / 0x58ADC0)");
+    }
+    // Game thread, at Present, every 30 frames: roots and decisions from the last window.
+    static void decideAll() {
+        if(!installed) return;
+        uint64_t tot2=0,tot3=0;std::unordered_map<uint32_t,std::pair<uint64_t,uint64_t>> f;
+        for(int i=1;i<used;++i) {const Origin& o=origins[i];if(!o.prims) continue;(o.is2D?tot2:tot3)+=o.prims;
+            for(int j=0;j<o.n;++j) {auto& c=f[o.chain[j]];(o.is2D?c.first:c.second)+=o.prims;}}
+        if(tot2>=20&&tot3>=50) {
+            guiRoots.clear();worldRoots.clear();
+            for(auto& [a,c]:f) {
+                if(c.first*2>=tot2&&c.second*10<=tot3) guiRoots.push_back(a);
+                if(c.second*2>=tot3&&c.first*10<=tot2*3) worldRoots.push_back(a);
+            }
+            uint64_t uiPrims=0;for(int i=1;i<used;++i) {decideOne(origins[i]);if(origins[i].ui) uiPrims+=origins[i].prims;}
+            // Safety valve: the interface is a few pieces; if 'interface' grew beyond 15 % of the 3D pieces, the chains
+            // are not understood -> no 3D interface piece at all this window (clean bars, maybe a button missing).
+            if(uiPrims*100>tot3*15) {for(int i=1;i<used;++i) origins[i].ui=false;guiRoots.clear();++valve;}
+            ready=true;++windows;lastTot2=tot2;lastTot3=tot3;
+        }
+        for(int i=1;i<256;++i) {origins[i].total+=origins[i].prims;origins[i].lastPrims=origins[i].prims;origins[i].prims=0;}
+        // Cached decisions follow the new roots; a nearly full table starts again (between two game frames: no draw of the
+        // current frame carries the old ids any more).
+        for(auto& c:cache) c=Cache{};
+        if(used>200) {for(auto& s:table) s=Sig{};for(int i=1;i<256;++i) origins[i]=Origin{};used=1;++resets;}
+    }
+    static void report() {
+        if(!enabled) return;
+        auto rva=[](uint32_t a) {return unsigned(a-k);};
+        std::string roots;char b[64];
+        for(uint32_t a:guiRoots) {snprintf(b,sizeof(b)," %06X",rva(a));roots+=b;}
+        roots+=" | world roots:";for(uint32_t a:worldRoots) {snprintf(b,sizeof(b)," %06X",rva(a));roots+=b;}
+        log("Interface origin: installed=%d ready=%d windows=%llu primitive setups=%llu (stack scans %llu, cache %llu), 3D vertices tagged=%llu, origins=%d (overflow %llu, table resets %llu), last window 2D=%llu 3D=%llu pieces, valve=%llu; interface roots:%s",
+            int(installed),int(ready),(unsigned long long)windows,(unsigned long long)begins,(unsigned long long)scans,(unsigned long long)hits,(unsigned long long)tagged,used-1,(unsigned long long)overflow,(unsigned long long)resets,
+            (unsigned long long)lastTot2,(unsigned long long)lastTot3,(unsigned long long)valve,roots.c_str());
+        begins=scans=hits=tagged=0;
+        // Origins with their chain (game RVAs), pieces of the last window, and where their Direct3D triangles landed.
+        int order[256];int m=0;for(int i=1;i<used;++i) order[m++]=i;
+        std::sort(order,order+m,[](int a,int c){return origins[a].lastPrims+origins[a].draws>origins[c].lastPrims+origins[c].draws;});
+        for(int q=0;q<m&&q<28;++q) {
+            Origin& o=origins[order[q]];std::string ch;
+            for(int j=0;j<o.n;++j) {snprintf(b,sizeof(b)," %06X",rva(o.chain[j]));ch+=b;}
+            log("  origin %3d %s %s pieces=%u draws=%u tris=%u (interface %u) box %.2f,%.2f-%.2f,%.2f setup at %06X chain:%s",order[q],o.is2D?"2D":"3D",o.ui?"INTERFACE":"dungeon  ",
+                o.lastPrims,o.draws,o.tris,o.uiTris,o.box[0],o.box[1],o.box[2],o.box[3],rva(o.ret0),ch.c_str());
+        }
+        for(int i=1;i<256;++i) {Origin& o=origins[i];o.draws=o.tris=o.uiTris=0;o.box[0]=o.box[1]=1e9f;o.box[2]=o.box[3]=-1e9f;}
+    }
+};
+void engineOriginNote(uint32_t* sp) {EngineOrigin::note(sp);}
 struct TopDownCamera {
     using Rebuild=void(__thiscall*)(void*);
     inline static Rebuild rebuild=nullptr;
@@ -1524,6 +1705,9 @@ struct Renderer {
     uint64_t statsFrames=0,statsVertices=0,statsWorld=0;
     std::vector<unsigned char> converted;
     std::vector<Vec3> positions;
+    // 0.8.0: triangle split of the 3D draws by engine origin (interface / dungeon).
+    std::vector<uint8_t> originFlags;std::vector<uint32_t> originUi,originWorld,originRemap;std::vector<unsigned char> originUiVerts,originUiIdx,originWorldIdx;
+    uint64_t statOriginUi=0,statOriginMixed=0,statOriginUiTris=0,statOriginWorldTris=0,statOriginWorld=0,statOriginUntagged=0;
     // 0.3.0 decoupled rendering (DecoupledRendering=1). 0 = the 0.2.9 path, which also stays in use for
     // menus, possession and the flat-screen mode.
     bool decoupledEnabled=true,decoupledFrame=false,frameOpen=false,lastAnchored=false;
@@ -1572,6 +1756,7 @@ struct Renderer {
         topDown.init(native);
         PauseWatch::install(native.base);
         PoolGrow::install(native.base);
+        EngineOrigin::install(native.base); // 0.8.0: interface / dungeon told apart by the engine (origin of each piece)
         LensHack::install(native.base);pickScale=iniFloat(L"TablePickScale",.20f,.12f,1.f); // 0.7.4: floor .30 -> .20 (at .30 the table overlapped the bars: pickFits never true)
         // 0.6.9.3: the focal factor is now the LARGEST one that still puts the whole table between the bars
         // (TablePickScale = lower limit): x0.30 fixed made the game choose low-resolution textures.
@@ -2275,16 +2460,82 @@ struct Renderer {
             // (0.7.0 cleared the native depth here: 'i' vanished in that version -> removed in 0.7.1.)
             probe("2D interface");
             ++ui;if(hudWanted()) uiReplay(d,type,primitives,verts,stride,indices,indexFormat,count,fvf);hideNative=uiWentToHeld;return;} // Native 2D path writes RHW=1
+        // 0.8.0: the engine says where every 3D vertex comes from (EngineOrigin). Interface triangles go to the HUD and
+        // stay in the game image; dungeon triangles go to the table and are hidden in the game image. The screen rules
+        // of 0.6.9.3-0.7.10 below are no longer used (they sent dungeon pieces into the bars and the hand window).
+        bool originDone=false;
+        if(EngineOrigin::enabled&&request.mode!=2) {
+            originDone=true;
+            originFlags.resize(count);UINT marked=0,uiVerts=0;int firstId=0;float bx0=1e9f,by0=1e9f,bx1=-1e9f,by1=-1e9f;
+            for(UINT i=0;i<count;++i) {
+                const unsigned char* vx=input+size_t(i)*stride;const int id=EngineOrigin::idOf(vx);
+                if(id) {++marked;if(!firstId) firstId=id;}
+                const uint8_t f=EngineOrigin::uiId(id)?1:0;originFlags[i]=f;uiVerts+=f;
+                float q[2];memcpy(q,vx,8);bx0=std::min(bx0,q[0]);by0=std::min(by0,q[1]);bx1=std::max(bx1,q[0]);by1=std::max(by1,q[1]);
+            }
+            if(!marked) ++statOriginUntagged;
+            auto at=[&](UINT n)->uint32_t{return !indices?uint32_t(n):indexFormat==D3DFMT_INDEX32?static_cast<const uint32_t*>(indices)[n]:uint32_t(static_cast<const uint16_t*>(indices)[n]);};
+            const bool triangles=type==D3DPT_TRIANGLELIST||type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLEFAN;
+            UINT tris=primitives,uiTris=0;originUi.clear();originWorld.clear();
+            if(uiVerts&&triangles) {
+                tris=0;
+                for(UINT t=0;t<primitives;++t) {
+                    uint32_t a,b,c;
+                    if(type==D3DPT_TRIANGLELIST) {a=at(3*t);b=at(3*t+1);c=at(3*t+2);}
+                    else if(type==D3DPT_TRIANGLESTRIP) {a=at(t);b=at(t+1);c=at(t+2);if(t&1) std::swap(a,b);}
+                    else {a=at(0);b=at(t+1);c=at(t+2);}
+                    if(a>=count||b>=count||c>=count) continue;
+                    ++tris;
+                    // A triangle is interface when at least 2 of its 3 vertices come from an interface origin (a vertex
+                    // created by the engine's clipping carries no origin).
+                    if(originFlags[a]+originFlags[b]+originFlags[c]>=2) {++uiTris;originUi.insert(originUi.end(),{a,b,c});}
+                    else originWorld.insert(originWorld.end(),{a,b,c});
+                }
+            } else if(uiVerts&&uiVerts*2>=count) uiTris=tris; // points / lines: whole draw by majority
+            if(firstId>0&&firstId<256&&uiW>0&&uiH>0) {
+                auto& o=EngineOrigin::origins[firstId];++o.draws;o.tris+=tris;o.uiTris+=uiTris;
+                o.box[0]=std::min(o.box[0],bx0/uiW);o.box[1]=std::min(o.box[1],by0/uiH);o.box[2]=std::max(o.box[2],bx1/uiW);o.box[3]=std::max(o.box[3],by1/uiH);
+            }
+            if(uiTris&&uiTris>=tris) {
+                ++statOriginUi;statOriginUiTris+=uiTris;++statUi3d;probe("3D INTERFACE (engine origin)");
+                if(hudWanted()) uiReplay(d,type,primitives,verts,stride,indices,indexFormat,count,fvf);
+                return;
+            }
+            if(uiTris) {
+                ++statOriginMixed;statOriginUiTris+=uiTris;statOriginWorldTris+=tris-uiTris;probe("3D MIXED (engine origin: interface part to the HUD)");
+                // Interface part: its own compact vertex list (the interface target measures boxes on the vertices it gets).
+                originRemap.assign(count,UINT32_MAX);originUiVerts.clear();uint32_t nv=0;
+                for(uint32_t& v:originUi) {
+                    if(originRemap[v]==UINT32_MAX) {originRemap[v]=nv++;originUiVerts.insert(originUiVerts.end(),input+size_t(v)*stride,input+size_t(v+1)*stride);}
+                    v=originRemap[v];
+                }
+                auto pack=[](const std::vector<uint32_t>& src,std::vector<unsigned char>& out,bool wide) {
+                    out.resize(src.size()*(wide?4:2));
+                    for(size_t i=0;i<src.size();++i) {if(wide) memcpy(out.data()+4*i,&src[i],4); else {const uint16_t s=uint16_t(src[i]);memcpy(out.data()+2*i,&s,2);}}
+                };
+                const bool uiWide=nv>65535,worldWide=count>65535;
+                pack(originUi,originUiIdx,uiWide);pack(originWorld,originWorldIdx,worldWide);
+                const D3DFORMAT uiFmt=uiWide?D3DFMT_INDEX32:D3DFMT_INDEX16;
+                if(hudWanted()) uiReplay(d,D3DPT_TRIANGLELIST,uiTris,originUiVerts.data(),stride,originUiIdx.data(),uiFmt,nv,fvf);
+                // The game draws this batch right after this hook with colour writes off (dungeon): its interface
+                // triangles are drawn here, visible, with the game's own states.
+                if(hideNativeWorld&&anchored&&topDown.active&&!possessedFrame&&!native.frontend())
+                    d->DrawIndexedPrimitiveUP(D3DPT_TRIANGLELIST,0,nv,uiTris,originUiIdx.data(),uiFmt,originUiVerts.data(),stride);
+                type=D3DPT_TRIANGLELIST;primitives=tris-uiTris;indices=originWorldIdx.data();indexFormat=worldWide?D3DFMT_INDEX32:D3DFMT_INDEX16;
+                if(primitives==0) return;
+            } else ++statOriginWorld;
+        }
         // 0.6.5.3: interface cards (portraits, room/spell tabs) are animated by the game in 3D (RHW != 1) when
         // hovered or picked up. They use the same textures as the 2D interface: keep them out of the dungeon.
-        if(uiTexFilter&&!uiTextures.empty()&&request.mode!=2) {
+        if(!originDone&&uiTexFilter&&!uiTextures.empty()&&request.mode!=2) {
             ComPtr<IDirect3DBaseTexture9> t;d->GetTexture(0,&t);
             if(t&&uiTextures.count(t.Get())) {++statUiIn3d;if(hudWanted()) uiReplay(d,type,primitives,verts,stride,indices,indexFormat,count,fvf);return;}
         }
         // 0.6.9.3: interface pieces the game animates in 3D (RHW != 1: panel cards, stone strip with a portrait)
         // appeared on the table when zoomed out. Geometric test only (no texture identity): every vertex much
         // nearer the camera than the dungeon (rhw > 3x the typical dungeon rhw) AND drawn over the bottom bars.
-        {float r0=1e9f,rs=0,y0=1e9f,y1=-1e9f;
+        // 0.8.0: only when the engine origin is unavailable (InterfaceFromEngine=0 or unsupported exe).
+        if(!originDone) {float r0=1e9f,rs=0,y0=1e9f,y1=-1e9f;
          for(UINT i=0;i<count;++i) {float v[4];memcpy(v,input+i*stride,16);r0=std::min(r0,v[3]);rs+=v[3];y0=std::min(y0,v[1]);y1=std::max(y1,v[1]);}
          const float mean=rs/std::max<UINT>(count,1);
          // 0.7.1: rhw rules restored (removed in 0.7.0 -> the 'i' button, visible in 0.6.9.17, vanished).
@@ -2592,7 +2843,7 @@ struct Renderer {
         lastWorldTime=wt;lastWorldCount=wc;lastEngineTime=et;lastEngineCount=ec;lastEngineHighest=eh;haveCounters=true;
     }
     void present(IDirect3DDevice9* d) {
-        {static uint32_t pf=0;probeFrame=(++pf%150)==0;}
+        {static uint32_t pf=0;probeFrame=(++pf%150)==0;if(pf%30==0) EngineOrigin::decideAll();}
         profiler.start(GetCurrentThreadId());profiler.report();profiler.lastPresentTick=GetTickCount64();profiler.stallLogged=false;
         NonBlockingPresent::install(d);
         textureQuality.enforce();
@@ -2884,6 +3135,10 @@ struct Renderer {
             log("Table picking: game camera focal x%.2f (wanted x%.2f), table between the bars %d, projection setups %ld",float(LensHack::applied),float(LensHack::want),int(pickFits),long(InterlockedExchange(&LensHack::calls,0)));
             log("Table pointer: %llu frames on the table (%llu on dungeon geometry, %llu on the flat table), %llu clicks, last point %.3f,%.3f",(unsigned long long)statTableHits,(unsigned long long)statPickHits,(unsigned long long)statPlaneHits,(unsigned long long)statTableClicks,lastTableX,lastTableY);statTableHits=statTableClicks=statPickHits=statPlaneHits=0;
             log("Interface in 3D over the bars (Ui3DFilter=%d): %llu draws moved to the HUD",int(ui3dFilter),(unsigned long long)statUi3d);statUi3d=0;
+            log("3D draws by engine origin: interface=%llu mixed=%llu (interface triangles %llu, dungeon triangles %llu) dungeon=%llu (of which without any interface mark %llu)",
+                (unsigned long long)statOriginUi,(unsigned long long)statOriginMixed,(unsigned long long)statOriginUiTris,(unsigned long long)statOriginWorldTris,(unsigned long long)statOriginWorld,(unsigned long long)statOriginUntagged);
+            statOriginUi=statOriginMixed=statOriginUiTris=statOriginWorldTris=statOriginWorld=statOriginUntagged=0;
+            EngineOrigin::report();
             log("Interface cards kept out of the dungeon: %llu draws (%zu interface textures)",(unsigned long long)statUiIn3d,uiTextures.size());statUiIn3d=0;uiTextures.clear();
             log("Held things (window=%d): %llu/%llu frames, %llu pieces moved to the hand, rejected %llu far from cursor / %llu in a panel, game hand count>0 in %llu frames",int(heldWindow),(unsigned long long)statHeldFrames,(unsigned long long)statUiFrames,(unsigned long long)statHeldDraws,(unsigned long long)statHeldFar,(unsigned long long)statHeldPanel,(unsigned long long)statHoldCount);statHeldFrames=statHeldDraws=statHeldFar=statHeldPanel=statHoldCount=statUiFrames=0;
             log("Keeper hand (3D cursor): found in %llu frames, %.1f draws/frame, last nearest rhw %.4f vs typical %.4f, cursor %.0f,%.0f in %ux%u",
@@ -2921,6 +3176,7 @@ struct Renderer {
 };
 Renderer& renderer() {static Renderer* r=new Renderer;return *r;}
 }
+extern "C" void __cdecl dk2vr_beginNote(uint32_t* sp) {engineOriginNote(sp);}
 extern "C" __declspec(dllexport) void __cdecl DK2VR_Draw(IDirect3DDevice9* d,D3DPRIMITIVETYPE t,UINT n,const void* v,UINT stride,const void* i,D3DFORMAT f,UINT min,UINT num) {
     try {renderer().draw(d,t,n,v,stride,i,f,min,num);} catch(...) {log("Draw exception; frame skipped");}
 }

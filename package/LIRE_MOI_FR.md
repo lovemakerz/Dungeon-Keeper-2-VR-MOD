@@ -1,4 +1,19 @@
-# Dungeon Keeper II VR — 0.7.10 expérimentale
+# Dungeon Keeper II VR — 0.8.0 expérimentale
+
+## Nouveau en 0.8.0 : interface et donjon séparés par le moteur du jeu
+
+Le mod ne devine plus ce qui est de l'interface d'après la position à l'écran. Il lit, **dans le moteur du jeu**, qui a demandé chaque pièce 3D : le code de l'interface ou le parcours du donjon. Le donjon ne peut donc plus apparaître dans les barres, la minicarte ou la main. Les barres sont prises dans le calque d'interface, avec la vraie transparence de chaque élément : plus de découpage ni de parties de boutons transparentes.
+
+**Panneaux de test numérotés** (sur les murs de gauche et de droite de la salle) :
+
+| N° | Mur | Contenu |
+|---|---|---|
+| 1 | gauche, avant | image complète du jeu : ne doit montrer que l'interface sur fond noir |
+| 2 | gauche, arrière | calque d'interface (source des barres) |
+| 3 | droite, avant | fenêtre de la main (créature tenue) |
+| 4 | droite, arrière | image du jeu avec le noir rendu transparent (ancienne méthode, sans découpage) |
+
+Réglages : `InterfaceFromEngine=1` (0 = règles de la 0.7.10), `HudBarsSource=0` (1 = barres tirées de l'image du jeu comme en 0.7.10), `TestWalls=1` (0 = panneaux de test masqués).
 
 Le donjon est posé sur **une table fixe devant vous, façon Demeo**. Une poignée fait glisser le donjon sous la main, deux poignées zooment et font tourner le donjon (la vraie caméra du jeu) ; la table elle-même ne bouge pas. L'écran du jeu (avec toute son interface) est affiché en grand en face, comme accroché au mur derrière la table. Les commandes du jeu restent à la souris et au clavier.
 

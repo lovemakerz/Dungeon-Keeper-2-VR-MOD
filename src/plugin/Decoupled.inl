@@ -591,7 +591,7 @@ struct VrThread {
     // the game's LOD bias is replaced by VrLodBias. Diagnostics: filters and texture sizes seen.
     int anisotropy=16;float lodBias=0;bool keepBias=false;
     std::map<uint32_t,uint64_t> filterSeen;std::map<UINT,uint64_t> sizeSeen;int sharpReports=0;
-    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader,mapShader;bool hudBacking=true;
+    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader,mapShader;bool hudBacking=true,barsFromImage=false,testWalls=true;
     uint32_t cacheEpoch=0;uint64_t frames=0;
     struct Images {ComPtr<IDirect3DTexture9> color[3];ComPtr<IDirect3DSurface9> target[3],depth;HANDLE handles[3]{};UINT w=0,h=0,dw=0,dh=0;uint32_t generation=0;};
     Images images[SlotCount];ComPtr<IDirect3DQuery9> query;
@@ -625,6 +625,10 @@ struct VrThread {
         // colours premultiplied. Compiled at run time with the system d3dcompiler_47 (no link dependency); without it
         // the bars keep the interface texture (previous behaviour).
         hudBacking=iniInt(L"HudStoneBacking",0)!=0; // 0.7.1: transparent again (user request)
+        // 0.8.0: the bars come from the interface layer (exact transparency of every piece) now that the dungeon can no
+        // longer reach it (engine origin); HudBarsSource=1 goes back to the 0.7.10 cut of the game image.
+        barsFromImage=iniInt(L"HudBarsSource",0)==1;testWalls=iniInt(L"TestWalls",1)!=0;
+        log("VR thread: bars from %s; numbered test panels on the side walls %s",barsFromImage?"the game image (HudBarsSource=1)":"the interface layer (HudBarsSource=0)",testWalls?"on (TestWalls=1)":"off");
         if(iniInt(L"HudFromGameImage",1)!=0) {
             using Compile=HRESULT(WINAPI*)(LPCVOID,SIZE_T,LPCSTR,const D3D_SHADER_MACRO*,ID3DInclude*,LPCSTR,LPCSTR,UINT,UINT,ID3DBlob**,ID3DBlob**);
             HMODULE dc=LoadLibraryW(L"d3dcompiler_47.dll");
@@ -765,12 +769,75 @@ struct VrThread {
         HudVertex v[4]={{a,c,u0,v0},{b,c,u1,v0},{cc,c,u1,v1},{dd,c,u0,v1}};
         for(int k:{0,1,2,0,2,3}) out.push_back(v[k]);
     }
+    // 0.8.0: numbered test panels on the two side walls of the room (user request: compare the sources side by side).
+    // 1 = the game's whole image (the dungeon is hidden in it: only interface over black must remain),
+    // 2 = the interface layer (source of the bars in 0.8.0), 3 = the hand window (held creature),
+    // 4 = the game image with only its black made transparent (0.7.x style, no cut-out mask).
+    // Big yellow digits (7 segments) above each panel. Left wall: 1 (front) and 2 (back); right wall: 3 (front), 4 (back).
+    static void rectQuad(std::vector<HudVertex>& out,const Pose& pose,float x0,float y0,float x1,float y1,float z,DWORD c) {
+        Vec3 a=toWorld(pose,{x0,y1,z}),b=toWorld(pose,{x1,y1,z}),cc=toWorld(pose,{x1,y0,z}),dd=toWorld(pose,{x0,y0,z});
+        HudVertex v[4]={{a,c,0,0},{b,c,1,0},{cc,c,1,1},{dd,c,0,1}};
+        for(int k:{0,1,2,0,2,3}) out.push_back(v[k]);
+    }
+    static void digit(std::vector<HudVertex>& out,const Pose& pose,float cx,float cy,int n,DWORD c) {
+        static const unsigned char segs[10]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f}; // bits a b c d e f g
+        const float w=.20f,h=.34f,t=.045f,hw=w*.5f,hh=h*.5f;const unsigned char s=segs[n%10];
+        if(s&1)  rectQuad(out,pose,cx-hw,cy+hh-t,cx+hw,cy+hh,.004f,c);       // a
+        if(s&2)  rectQuad(out,pose,cx+hw-t,cy,cx+hw,cy+hh,.004f,c);          // b
+        if(s&4)  rectQuad(out,pose,cx+hw-t,cy-hh,cx+hw,cy,.004f,c);          // c
+        if(s&8)  rectQuad(out,pose,cx-hw,cy-hh,cx+hw,cy-hh+t,.004f,c);       // d
+        if(s&16) rectQuad(out,pose,cx-hw,cy-hh,cx-hw+t,cy,.004f,c);          // e
+        if(s&32) rectQuad(out,pose,cx-hw,cy,cx-hw+t,cy+hh,.004f,c);          // f
+        if(s&64) rectQuad(out,pose,cx-hw,cy-t*.5f,cx+hw,cy+t*.5f,.004f,c);   // g
+    }
+    void drawTestWalls(IDirect3DDevice9Ex* d,const Package& p,const Request& r) {
+        const bool floorKnown=r.handFlags&RequestFloorKnown;
+        const float floorY=floorKnown?r.floorY:r.table.position.y-.78f;
+        const Pose room{r.anchor.orientation,{r.anchor.position.x,floorY,r.anchor.position.z}};
+        const float W=1.5f,H=1.125f,Y=1.45f;
+        struct Spot {float x,z,yaw;};
+        const Spot spots[4]={{-2.25f,-1.25f,Pi*.5f},{-2.25f,.75f,Pi*.5f},{2.25f,-1.25f,-Pi*.5f},{2.25f,.75f,-Pi*.5f}};
+        Pose pose[4];
+        for(int i=0;i<4;++i) pose[i]={normalized(multiply(room.orientation,yawQuat(spots[i].yaw))),toWorld(room,{spots[i].x,Y,spots[i].z})};
+        // Untextured: frames, grey backings (specks show on them), digits.
+        std::vector<HudVertex> plain;plain.reserve(600);
+        for(int i=0;i<4;++i) {
+            rectQuad(plain,pose[i],-W*.5f-.04f,-H*.5f-.04f,W*.5f+.04f,H*.5f+.04f,-.010f,0xff141414);
+            rectQuad(plain,pose[i],-W*.5f,-H*.5f,W*.5f,H*.5f,-.005f,i==0?0xff000000:0xff5a6068);
+            digit(plain,pose[i],0,H*.5f+.26f,i+1,0xffffd21e);
+        }
+        d->SetTexture(0,nullptr);d->SetPixelShader(nullptr);
+        d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);
+        d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_DIFFUSE);
+        d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_DIFFUSE);
+        if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(plain.size()/3),plain.data(),sizeof(HudVertex)))) ++sDrawFailures;
+        d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);
+        d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
+        auto panel=[&](int i,IDirect3DTexture9* t,bool opaque,IDirect3DPixelShader9* ps) {
+            if(!t) return;
+            std::vector<HudVertex> q;quad(q,pose[i],W,H,0,0,1,1);
+            d->SetRenderState(D3DRS_ALPHABLENDENABLE,opaque?FALSE:TRUE);
+            d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
+            d->SetTexture(0,t);d->SetPixelShader(ps);
+            if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,2,q.data(),sizeof(HudVertex)))) ++sDrawFailures;
+            d->SetPixelShader(nullptr);
+        };
+        IDirect3DTexture9* frame=p.frame?texture(p.frame):nullptr;
+        panel(0,frame,true,nullptr);
+        panel(1,p.hud?texture(p.hud):nullptr,false,nullptr);
+        panel(2,p.held?texture(p.held):nullptr,false,nullptr);
+        if(barShader&&frame) {
+            static const float none[8][4]={{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1},{0,0,1,1}};
+            d->SetPixelShaderConstantF(0,&none[0][0],8);panel(3,frame,false,barShader.Get());
+        }
+        d->SetTexture(0,nullptr);
+    }
     void drawHud(IDirect3DDevice9Ex* d,const HudLayout& hud,const Package& p,const Request& r,int eye,const D3DMATRIX& eyeWorld) {
         (void)eye;
         std::vector<HudVertex> v;v.reserve(64);
         const float W=float(p.hudWidth),H=float(p.hudHeight);
         std::vector<HudVertex> sv,fv,mv;
-        IDirect3DTexture9* frameTex=(p.frame&&barShader)?texture(p.frame):nullptr;
+        IDirect3DTexture9* frameTex=(p.frame&&barShader&&barsFromImage)?texture(p.frame):nullptr;
         for(int i=0;i<HudCount;++i) {
             const HudPanel& q=hud.panel[i];if(!q.shown) continue;
             // 0.6.9.15: bars and minimap from the game's final image (exact composition, nothing to classify).
@@ -829,6 +896,10 @@ struct VrThread {
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
             d->SetTexture(0,texture(p.screen));
             if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(sv.size()/3),sv.data(),sizeof(HudVertex)))) ++sDrawFailures;
+        }
+        if(testWalls) {
+            drawTestWalls(d,p,r);
+            d->SetRenderState(D3DRS_ALPHABLENDENABLE,TRUE);d->SetRenderState(D3DRS_ALPHATESTENABLE,TRUE);d->SetRenderState(D3DRS_ALPHAREF,4);
         }
         // The Keeper's hand (the game cursor itself, with its animations) on the pointing controller.
         const int h=(r.pointerFlags&HudLeftHanded)?0:1;
