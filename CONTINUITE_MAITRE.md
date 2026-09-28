@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.12 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.13 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -83,6 +83,11 @@
   - (3) Clics bloqués sur le bouton de repli : panneau du bas, x .365–.415, y .760–.835 (mesuré sur la capture VR ; le curseur bouge encore, pas de clic).
 - **0.6.9.12** (base 0.6.9.11, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.11 (rapport DK2VR_Rapport_20260928_164230.zip) : RÉGRESSION, toutes les barres et la minicarte vides (texture HUD vide, capture « écran » noire) ; l'UI réapparaît en partie en pointant le donjon.
   - Cause : le jeu dessine une couche d'interface de 1024x619 (sonde « cursor-covering draw … size=1024x619 ») ; le critère bigBox (≥8 %×8 %, sans limite haute) la prenait pour une boîte de message -> boxOnly -> exclue de la texture HUD. Correctif : bigBox exige aussi ≤70 % × ≤55 % et d'être ENTIÈREMENT entre 0,085 et 0,72 de hauteur. LEÇON : tout critère « exclure de la texture HUD » doit avoir des bornes hautes de taille et de position.
+- **0.6.9.13** (base 0.6.9.12, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.12 (rapport DK2VR_Rapport_20260928_165120.zip) : barres de nouveau complètes ; restent : (1) morceau de notification (texte, X/✓) sur la main quand le laser est sur la table ; (2) bouton « 0 » et portrait derrière les compteurs (14/0/14/0) invisibles sauf au survol — absents aussi de la texture HUD (capture « écran ») ; (3) créature tenue coupée en bas.
+  - (2) Ces pièces 3D chevauchent deux régions (barre stats / panneau du bas) : inBar exige maintenant que chaque COIN soit dans une des 4 régions de barre (±0,01), au lieu du rectangle entier dans une seule.
+  - (1) inBox ne dépend plus du curseur : tout ce qui est dans la boîte de l'image précédente va au panneau messages, sauf ce qui est dessiné près du curseur APRÈS le modèle tenu (heldModelSeen : draw à z variable près du curseur ; compteur d'objets tenus).
+  - (3) Fenêtre de la main : 3,2 R vers le bas au lieu de 2,2 R (Decoupled.inl, quad + UV).
+
 
 
 
