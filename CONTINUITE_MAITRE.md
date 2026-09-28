@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.14 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.15 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -91,6 +91,12 @@
   - CAUSE PROBABLE commune (déduite) : uiReplay utilisait le tampon de profondeur DU JEU (profondeur du donjon) -> les pièces d'interface placées en profondeur (« 0 », portrait) échouaient au test là où le donjon est plus proche ; au survol, le jeu les rapproche -> visibles. Correctif : tampon de profondeur PROPRE à l'interface (D24S8, taille de la cible, vidé à 1,0 à chaque image avec la cible ; ZFUNC natif = 4 LESSEQUAL vérifié dans le journal), restauré après chaque draw (DepthBack). Les pièces se trient toujours entre elles (leçon 0.6.9.9 respectée).
   - Bouton de repli : rectangle mesuré sur la texture HUD (capture écran) : flèches x .397–.429, y .766–.824 -> blocage x .390–.436, y .755–.832, sur panneau bas OU barre stats.
   - Fenêtre de la main : 1,5 R à gauche, 4,2 R en bas.
+- **0.6.9.15** (base 0.6.9.14, livrée 2026-09-28, NON TESTÉE) — CHANGEMENT D'ARCHITECTURE DU HUD. Retour 0.6.9.14 (rapport DK2VR_Rapport_20260928_174914.zip) : « toujours mauvais », UI buguée partout, des morceaux bougent dans les zones transparentes des barres et de la minicarte quand on déplace le donjon, boutons toujours bugués. Constat : la reconstitution de l'interface draw par draw (uiReplay + filtres RHW≠1 / inBar / cartes / profondeur) est une impasse (0.6.9.3 → 0.6.9.14 : chaque règle en casse une autre ; des draws du donjon partaient dans la texture HUD).
+  - NOUVEAU : les barres (haut, stats, panneau du bas) et la minicarte sont découpées dans l'IMAGE FINALE du jeu (back buffer au Present, zone de jeu letterboxée k=min(bw/uiW,bh/uiH), étirée à uiW×uiH -> mêmes rectangles HudRegions que la texture HUD). CopyCache::gameImage, Package::frame. VR : shader ps_2_0 compilé à l'exécution (d3dcompiler_47 système, LoadLibrary) : noir -> transparent (alpha=saturate((max(r,g,b)-0,025)×25), couleurs prémultipliées). Minicarte : opaque (TFACTOR alpha 1 ; son noir = zones inexplorées). Repli automatique sur l'ancienne méthode si le shader est indisponible. DK2VR.ini : HudFromGameImage=1.
+  - Pour que l'image finale n'ait pas de donjon sous les barres : quand la table tient entre les barres (pickFits), le rectangle moteur (ViewExpand, projectTable) est borné en hauteur à [min(TablePickTop,0,07) ; 0,69] de l'écran.
+  - INCHANGÉ : options (panneau entier, texture HUD, pause), messages (texture screen), fenêtre de la main (texture HUD), curseur.
+  - À vérifier : le curseur logiciel du jeu (main) apparaît désormais aussi dans les barres quand on les pointe (il fait partie de l'image finale) ; morceaux de donjon aux bords des barres si une case déborde du rectangle.
+
 
 
 

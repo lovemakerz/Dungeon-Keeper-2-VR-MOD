@@ -226,6 +226,7 @@ struct Package {
     bool clip=false,ceiling=false;float planes[5][4]{};         // record-LOCAL (fixed-function clip planes are in world space)
     int pedestalSide=0;bool buttonHover=false;         // 0.6.8: minimap pedestal side (0 auto, 1 left, 2 right), laser on its button
     uint32_t screen=0;                              // 0.6.9: wall screen texture (only what lies between the bars)
+    uint32_t frame=0;                               // 0.6.9.15: game final image (game area, interface size) for the bars
     bool screenShown=false;                         // 0.6.7.1: wall screen (options / menus) visible
     bool screenWhole=true;                          // 0.6.9.8: options (whole area, HUD texture) vs messages (screen texture)
     HudRegion msgRegion{0,0,0,0};                   // 0.6.9.11: message box rectangle (fractions of the game area)
@@ -408,6 +409,14 @@ struct CopyCache {
         if(FAILED(c->texture->GetSurfaceLevel(0,&s))||FAILED(d->StretchRect(back,nullptr,s.Get(),nullptr,D3DTEXF_NONE))) {retire(c->id);return 0;}
         c->lastPackage=package;retire(c->id);return c->id;
     }
+    // 0.6.9.15: the game's FINAL image (what the PC screen shows), game area only, at the interface resolution:
+    // the VR bars are cut from it (same coordinates as the interface texture) instead of classifying draws.
+    uint32_t gameImage(IDirect3DDevice9* d,IDirect3DSurface9* back,const RECT& src,UINT w,UINT h) {
+        auto* c=acquire(d,w,h,1);if(!c) return 0;
+        ComPtr<IDirect3DSurface9> s;
+        if(FAILED(c->texture->GetSurfaceLevel(0,&s))||FAILED(d->StretchRect(back,&src,s.Get(),nullptr,D3DTEXF_LINEAR))) {retire(c->id);return 0;}
+        c->lastPackage=package;retire(c->id);return c->id;
+    }
     void releaseAll() {objects.clear();sources.clear();retired.clear();pool.clear();block.Reset();blockFailed=false;TextureWatch::clear();}
     void statsLine(char* out,size_t n) {
         snprintf(out,n,"copies=%llu (%llu levels, %.2f ms) new=%llu reused=%llu changed=%llu refreshed=%llu live=%zu pool=%zu retired=%zu sources=%zu failures=%llu mips=%u",
@@ -582,7 +591,7 @@ struct VrThread {
     // the game's LOD bias is replaced by VrLodBias. Diagnostics: filters and texture sizes seen.
     int anisotropy=16;float lodBias=0;bool keepBias=false;
     std::map<uint32_t,uint64_t> filterSeen;std::map<UINT,uint64_t> sizeSeen;int sharpReports=0;
-    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;
+    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader;
     uint32_t cacheEpoch=0;uint64_t frames=0;
     struct Images {ComPtr<IDirect3DTexture9> color[3];ComPtr<IDirect3DSurface9> target[3],depth;HANDLE handles[3]{};UINT w=0,h=0,dw=0,dh=0;uint32_t generation=0;};
     Images images[SlotCount];ComPtr<IDirect3DQuery9> query;
@@ -612,6 +621,19 @@ struct VrThread {
         pp.BackBufferWidth=pp.BackBufferHeight=16;pp.hDeviceWindow=window;pp.PresentationInterval=D3DPRESENT_INTERVAL_IMMEDIATE;
         hr=ex->CreateDeviceEx(cp.AdapterOrdinal,D3DDEVTYPE_HAL,window,D3DCREATE_HARDWARE_VERTEXPROCESSING|D3DCREATE_FPU_PRESERVE,&pp,nullptr,&dev);
         if(FAILED(hr)) return fail("CreateDeviceEx",hr);
+        // 0.6.9.15: pixel shader for the bars cut from the game image: black (no interface) becomes transparent,
+        // colours premultiplied. Compiled at run time with the system d3dcompiler_47 (no link dependency); without it
+        // the bars keep the interface texture (previous behaviour).
+        if(iniInt(L"HudFromGameImage",1)!=0) {
+            using Compile=HRESULT(WINAPI*)(LPCVOID,SIZE_T,LPCSTR,const D3D_SHADER_MACRO*,ID3DInclude*,LPCSTR,LPCSTR,UINT,UINT,ID3DBlob**,ID3DBlob**);
+            HMODULE dc=LoadLibraryW(L"d3dcompiler_47.dll");
+            auto compile=dc?reinterpret_cast<Compile>(GetProcAddress(dc,"D3DCompile")):nullptr;
+            const char* src="sampler f:register(s0);float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float l=max(c.r,max(c.g,c.b));float a=saturate((l-0.025)*25.0);return float4(c.rgb*a,a);}";
+            ComPtr<ID3DBlob> code,err;
+            if(compile&&SUCCEEDED(compile(src,strlen(src),nullptr,nullptr,nullptr,"main","ps_2_0",0,0,&code,&err))&&SUCCEEDED(dev->CreatePixelShader(static_cast<const DWORD*>(code->GetBufferPointer()),&barShader)))
+                log("VR thread: bars drawn from the game image (HudFromGameImage=1)");
+            else log("VR thread: bar shader unavailable (d3dcompiler_47 %s), bars from the interface texture",dc?"failed":"missing");
+        }
         // Self-test: A fills three mip levels with known colours; B must read them back.
         const DWORD colors[3]={0xff12ab34,0xff3456cd,0xffabcdef};
         auto testLevels=[&](UINT levels)->int {
@@ -734,9 +756,12 @@ struct VrThread {
         (void)eye;
         std::vector<HudVertex> v;v.reserve(64);
         const float W=float(p.hudWidth),H=float(p.hudHeight);
-        std::vector<HudVertex> sv;
+        std::vector<HudVertex> sv,fv,mv;
+        IDirect3DTexture9* frameTex=(p.frame&&barShader)?texture(p.frame):nullptr;
         for(int i=0;i<HudCount;++i) {
             const HudPanel& q=hud.panel[i];if(!q.shown) continue;
+            // 0.6.9.15: bars and minimap from the game's final image (exact composition, nothing to classify).
+            if(frameTex&&i!=HudScreen) {quad(i==HudMinimap?mv:fv,q.pose,q.w,q.h,q.x0/W,q.y0/H,q.x1/W,q.y1/H);continue;} // minimap opaque (its black = unexplored land)
             quad((i==HudScreen&&!p.screenWhole)?sv:v,q.pose,q.w,q.h,q.x0/W,q.y0/H,q.x1/W,q.y1/H); // 0.6.9.3: options from the full interface texture; 0.6.9.8: messages from the screen texture
         }
         d->SetTransform(D3DTS_WORLD,&eyeWorld);d->SetPixelShader(nullptr);d->SetVertexShader(nullptr);
@@ -760,6 +785,21 @@ struct VrThread {
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
             d->SetTexture(0,texture(p.hud));
             if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(v.size()/3),v.data(),sizeof(HudVertex)))) ++sDrawFailures;
+        }
+        if(!fv.empty()) {
+            // Black of the game image (no dungeon behind the bars: engine view kept between the bars) = transparent.
+            d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
+            d->SetTexture(0,frameTex);d->SetPixelShader(barShader.Get());
+            if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(fv.size()/3),fv.data(),sizeof(HudVertex)))) ++sDrawFailures;
+            d->SetPixelShader(nullptr);
+        }
+        if(!mv.empty()) {
+            d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ZERO);
+            d->SetRenderState(D3DRS_TEXTUREFACTOR,0xffffffff);
+            d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TFACTOR);
+            d->SetTexture(0,frameTex);
+            if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(mv.size()/3),mv.data(),sizeof(HudVertex)))) ++sDrawFailures;
+            d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
         }
         if(!sv.empty()&&p.screen&&texture(p.screen)) {
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
