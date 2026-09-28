@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.5";
+constexpr const char* Version="0.8.6";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -2510,6 +2510,21 @@ struct Renderer {
                 float q[2];memcpy(q,vx,8);bx0=std::min(bx0,q[0]);by0=std::min(by0,q[1]);bx1=std::max(bx1,q[0]);by1=std::max(by1,q[1]);
             }
             if(!marked) ++statOriginUntagged;
+            // 0.8.6: decision PER DRAW (0.8.2-0.8.5 statistics per origin cannot work: the buttons, the held creature and the
+            // dungeon creatures are drawn by the same engine code with the same call chain). Interface = the draw lies ENTIRELY on the
+            // bars (or is a small piece at the cursor) AND was not produced by the terrain code (static height field 0x587647,
+            // unlit procedural mesh 0x588517: floor, water, lava, rock -> always dungeon, they were the specks in the bars).
+            {
+                bool terrain=false;
+                if(firstId>0&&firstId<256) {const uint32_t r=EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k);terrain=r>=0x587600&&r<0x587700||r>=0x588500&&r<0x588600;}
+                const float ihe=std::min(float(uiH),uiW*.75f),iwe=std::min(float(uiW),uiH*4.f/3.f),oye=(uiH-ihe)*.5f;
+                const float ty=(by0-oye)/ihe,by=(by1-oye)/ihe,bw=(bx1-bx0)/iwe,bh=(by1-by0)/ihe;
+                const float Re=heldRadius*uiW/1024.f*.6f,cx=(bx0+bx1)*.5f,cy=(by0+by1)*.5f;
+                const bool onBars=((ty>=.66f&&by<=1.02f&&bw<=.30f&&bh<=.20f)||(bw>=.5f&&bh<=.22f&&ty>=.80f&&by<=1.005f)||(by<=.11f&&bw<=.30f))&&uiW>0&&uiH>0;
+                const bool atCursor=cursorKnown&&bw<.25f&&bh<.30f&&cx>cursorPx-Re&&cx<cursorPx+Re&&cy>cursorPy-Re*1.4f&&cy<cursorPy+Re*1.4f;
+                const bool drawUi=marked&&!terrain&&(onBars||atCursor);
+                std::fill(originFlags.begin(),originFlags.end(),uint8_t(drawUi?1:0));uiVerts=drawUi?count:0;
+            }
             auto at=[&](UINT n)->uint32_t{return !indices?uint32_t(n):indexFormat==D3DFMT_INDEX32?static_cast<const uint32_t*>(indices)[n]:uint32_t(static_cast<const uint16_t*>(indices)[n]);};
             const bool triangles=type==D3DPT_TRIANGLELIST||type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLEFAN;
             UINT tris=primitives,uiTris=0;originUi.clear();originWorld.clear();
