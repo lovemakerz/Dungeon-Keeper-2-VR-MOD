@@ -26,7 +26,6 @@ constexpr HudRegion HudScreenWhole={0.f,.090f,1.f,.760f};
 // pointerFlags bits 8.. carry the HUD settings chosen on the host (F2 etc.).
 constexpr uint32_t PointerAimValid=1u<<3,PointerTriggerRaw=1u<<4,PointerSecondRaw=1u<<5;
 constexpr uint32_t HudLeftHanded=1u<<8,HudBottomNear=1u<<9;
-constexpr uint32_t HudPickOff=1u<<12; // 0.6.9.4: F12 = whole-table picking off (game camera focal untouched, sharp textures)
 constexpr uint32_t HudMinimapShift=10; // 2 bits: 0 pedestal, 1 watch, 2 watch when looked at
 inline int hudMinimapMode(uint32_t flags) {return int((flags>>HudMinimapShift)&3u)%3;}
 struct HudSizes {float wall=1.8f,bottom=.80f,minimap=.30f,cursor=.10f;};

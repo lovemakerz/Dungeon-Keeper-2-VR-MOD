@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.17 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.0 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -103,6 +103,12 @@
 - **0.6.9.17** (base 0.6.9.16, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.16 (rapport DK2VR_Rapport_20260928_201959.zip, utilisateur découragé, sans commentaire) : RÉGRESSION GRAVE, table vide (donjon invisible au casque) + grand panneau gris au-dessus des barres.
   - Cause table vide (vérifiée dans le code) : NativeWrite remettait COLORWRITEENABLE=0 à la FIN d'un draw du donjon ; le draw suivant était enregistré (Snapshot::capture lit COLORWRITEENABLE) avec 0 -> rejoué invisible au casque. Correctif : COLORWRITEENABLE=15 au DÉBUT de chaque draw (avant toute lecture d'état) ; et le rejeu VR force 15 pour cet état quoi qu'il ait été enregistré. LEÇON : tout état modifié pour le jeu natif doit être rétabli avant l'enregistrement du draw suivant.
   - Panneau gris : la plaque de pierre derrière le panneau messages le rendait visible alors qu'il est souvent affiché vide (détection par union). Plus de plaque derrière le panneau messages (seulement barres et options).
+- **0.7.0** (livrée 2026-09-28, NON TESTÉE) — DEMANDE UTILISATEUR : « pars de la version de référence et fais toutes les modifications attendues ». Référence = 0.6.9.2 (commit initial du dépôt 5346077, version livrée au début de la session). Toutes les différences 0.6.9.2 -> 0.6.9.17 ont été relues bloc par bloc ; seules les modifications validées/attendues sont gardées, les expériences ratées retirées.
+  - Retour 0.6.9.17 (rapport DK2VR_Rapport_20260928_203326.zip) : barres propres sur pierre (capture 2) et options entières (capture 3) = architecture « image finale » OK ; MAIS copie des barres posée sur la table (fenêtre de la main HeldFromModel déclenchée par la pioche puis recevant tout ce qui suit) ; bouton « 0 » toujours absent.
+  - GARDÉ : correctif détail textures (21 comparaisons LOD), focale adaptative + pickFits, PoolGrow (crash exit -1), CrashLog + sorties du jeu journalisées, pause F12 qui rend la focale, PauseWatch -> panneau options entier (région 0,09–0,76), panneau messages au-dessus des barres (boîte bornée, cliquable), bouton de repli bloqué, barres + minicarte depuis l'image finale (shader noir->transparent, minicarte opaque) avec donjon masqué dans l'image du jeu (COLORWRITEENABLE, rétabli avant chaque enregistrement) et rectangle moteur borné entre les barres, plaque de pierre derrière barres/options, tampon de profondeur propre à l'interface, pièces 3D d'interface dans les barres -> HUD (règles de POSITION uniquement : inBar / hors bande), fenêtre de main agrandie, recentrage auto au lancement, captures JPG + exe dans le rapport, runtime OpenXR système, minicarte recadrée, colonne du piédestal sous la plaque.
+  - RETIRÉ : fenêtre de main « HeldFromModel » (cause de la copie des barres sur la table), heuristiques de profondeur rhw (near3 ×3, cartes ×2,5), bascule F12 de la sélection.
+  - NOUVEAU : (a) profondeur native effacée (Clear ZBUFFER) au premier draw d'interface qui suit un draw de donjon masqué : le donjon invisible écrivait encore sa profondeur et cachait les pièces d'interface placées en profondeur (« 0 », portrait des compteurs) jusque dans l'image du jeu ; (b) fenêtre de la main : barres effacées SAUF sous la boîte englobante du modèle tenu (heldKeep, ±12 px).
+
 
 
 
