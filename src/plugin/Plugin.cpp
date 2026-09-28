@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.0";
+constexpr const char* Version="0.8.1";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -798,7 +798,7 @@ struct PauseWatch {
 // at least half of the flat 2D interface pieces and at most 10 % of the 3D pieces; a 'world root' renders at least half
 // of the 3D pieces and at most 30 % of the 2D ones. A 3D origin is interface when its chain holds an interface root and
 // no world root. Every doubt (untagged vertex, unknown origin, too many origins) = dungeon: never the other way.
-constexpr int OriginChain=12;
+constexpr int OriginChain=32;
 struct OriginRecord {uint32_t ret0=0;uint32_t chain[OriginChain]{};uint8_t n=0;bool is2D=false,ui=false;uint32_t prims=0,lastPrims=0;uint64_t total=0;
     uint32_t draws=0,tris=0,uiTris=0;float box[4]={1e9f,1e9f,-1e9f,-1e9f};};
 struct OriginSig {uint32_t hash=0;uint8_t id=0;};
@@ -854,7 +854,7 @@ struct EngineOrigin {
         }
         ++scans;
         const uintptr_t top=uintptr_t(reinterpret_cast<NT_TIB*>(NtCurrentTeb())->StackBase);
-        const size_t limit=std::min<size_t>(384,top>uintptr_t(frame)?(top-uintptr_t(frame))/4:0);
+        const size_t limit=std::min<size_t>(1536,top>uintptr_t(frame)?(top-uintptr_t(frame))/4:0);
         uint32_t chain[MaxChain];uint16_t off[MaxChain];int n=0;
         for(size_t i=0;i<limit&&n<MaxChain;++i) {
             const uint32_t v=frame[i];if(!isRet(v)) continue;
@@ -945,7 +945,7 @@ struct EngineOrigin {
         std::sort(order,order+m,[](int a,int c){return origins[a].lastPrims+origins[a].draws>origins[c].lastPrims+origins[c].draws;});
         for(int q=0;q<m&&q<28;++q) {
             Origin& o=origins[order[q]];std::string ch;
-            for(int j=0;j<o.n;++j) {snprintf(b,sizeof(b)," %06X",rva(o.chain[j]));ch+=b;}
+            for(int j=0;j<o.n&&j<16;++j) {snprintf(b,sizeof(b)," %06X",rva(o.chain[j]));ch+=b;}
             log("  origin %3d %s %s pieces=%u draws=%u tris=%u (interface %u) box %.2f,%.2f-%.2f,%.2f setup at %06X chain:%s",order[q],o.is2D?"2D":"3D",o.ui?"INTERFACE":"dungeon  ",
                 o.lastPrims,o.draws,o.tris,o.uiTris,o.box[0],o.box[1],o.box[2],o.box[3],rva(o.ret0),ch.c_str());
         }
