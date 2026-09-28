@@ -961,7 +961,7 @@ struct VrThread {
         // 0.6.9.16: opaque stone slab with a darker frame behind every HUD panel (user request): the panels no longer
         // show what lies behind them. Minimap excluded (it lies on the pedestal plate).
         if(hudOn&&hudBacking) for(int i=0;i<HudCount;++i) {
-            const HudPanel& q=hud.panel[i];if(!q.shown||i==HudMinimap) continue;
+            const HudPanel& q=hud.panel[i];if(!q.shown||i==HudMinimap||(i==HudScreen&&!p.screenWhole)) continue; // 0.6.9.17: not behind the message panel (often shown empty)
             const float w=q.w*.5f,h=q.h*.5f,f=.012f;
             coloredBox(pedestalMesh,q.pose,{-w-f,-h-f,-.020f},{w+f,h+f,-.010f},0xff2b2723,0xff1f1c19);       // frame
             coloredBox(pedestalMesh,q.pose,{-w,-h,-.010f},{w,h,-.003f},0xff4d4741,0xff35302b);               // stone face
@@ -1072,7 +1072,8 @@ struct VrThread {
                         ComPtr<IDirect3DPixelShader9> ps;if(s.shader) {auto it=shaders.find(s.shader);if(it!=shaders.end()) ps=it->second;}
                         d->SetPixelShader(ps.Get());cShader=s.shader;vShader=true;
                     }
-                    for(size_t i=0;i<Snapshot::RS;++i) if(!vRS[i]||cRS[i]!=s.rs[i]) {d->SetRenderState(Snapshot::renderStates[i],s.rs[i]);cRS[i]=s.rs[i];vRS[i]=true;}
+                    for(size_t i=0;i<Snapshot::RS;++i) {const DWORD v=Snapshot::renderStates[i]==D3DRS_COLORWRITEENABLE?15u:s.rs[i]; // 0.6.9.17: the headset always writes colour
+                        if(!vRS[i]||cRS[i]!=v) {d->SetRenderState(Snapshot::renderStates[i],v);cRS[i]=v;vRS[i]=true;}}
                     for(int t=0;t<Snapshot::Stages;++t) for(size_t i=0;i<Snapshot::TS;++i)
                         if(!vTS[t][i]||cTS[t][i]!=s.ts[t][i]) {d->SetTextureStageState(t,Snapshot::stageStates[i],s.ts[t][i]);cTS[t][i]=s.ts[t][i];vTS[t][i]=true;}
                     for(int t=0;t<Snapshot::Samplers;++t) {

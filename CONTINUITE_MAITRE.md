@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.16 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.17 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -100,6 +100,10 @@
   - Donjon masqué dans l'image du jeu : DK2VR_Draw est appelé JUSTE AVANT le draw natif (WrapperBridge.hpp, vérifié) -> pour chaque draw, RAII NativeWrite fixe D3DRS_COLORWRITEENABLE (0 pour les draws du donjon enregistrés pour le casque en vue table, et pour les pièces envoyées à la main ; 15 sinon). État D3D9 jamais utilisé par le jeu DX7. L'écran PC montre l'interface sur fond noir. HideNativeWorld=1.
   - Fenêtre de la main (HeldFromModel=1) : dès qu'une pièce à z variable près du curseur (modèle tenu) est rejouée, elle et tout ce qui suit dans l'image vont AUSSI dans heldSurf (vidée au premier) ; plus de copie de l'interface ni d'effacement des barres. L'ancien mode reste si HeldFromModel=0.
   - Plaque de pierre opaque (face 0xff4d4741, cadre 0xff2b2723 de 1,2 cm) derrière chaque panneau HUD sauf la minicarte (maillage du piédestal, écrit la profondeur, dessiné avant le HUD). HudStoneBacking=1.
+- **0.6.9.17** (base 0.6.9.16, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.16 (rapport DK2VR_Rapport_20260928_201959.zip, utilisateur découragé, sans commentaire) : RÉGRESSION GRAVE, table vide (donjon invisible au casque) + grand panneau gris au-dessus des barres.
+  - Cause table vide (vérifiée dans le code) : NativeWrite remettait COLORWRITEENABLE=0 à la FIN d'un draw du donjon ; le draw suivant était enregistré (Snapshot::capture lit COLORWRITEENABLE) avec 0 -> rejoué invisible au casque. Correctif : COLORWRITEENABLE=15 au DÉBUT de chaque draw (avant toute lecture d'état) ; et le rejeu VR force 15 pour cet état quoi qu'il ait été enregistré. LEÇON : tout état modifié pour le jeu natif doit être rétabli avant l'enregistrement du draw suivant.
+  - Panneau gris : la plaque de pierre derrière le panneau messages le rendait visible alors qu'il est souvent affiché vide (détection par union). Plus de plaque derrière le panneau messages (seulement barres et options).
+
 
 
 
