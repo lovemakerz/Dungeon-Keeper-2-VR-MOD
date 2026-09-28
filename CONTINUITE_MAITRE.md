@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.11 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.12 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -81,6 +81,9 @@
   - (1) Draw 3D ≤64 sommets entièrement dans une des 4 régions de barre (HudRegions 0..3, ±0,005) -> HUD.
   - (2) Pièces de boîte de message (bigBox, ou dans la boîte précédente hors curseur quand le laser est sur la table) : UNIQUEMENT dans la texture « screen » (boxOnly : pas dans la texture HUD) -> la fenêtre de la main n'a plus de boîte, plus d'effacement (qui supprimait la créature). Panneau messages = rectangle de la boîte / union (msgRegion, marge 1 %, Package::msgRegion, layoutHud msg), même échelle et même position horizontale que sur l'écran du jeu -> ne capte plus le laser au-dessus de la table.
   - (3) Clics bloqués sur le bouton de repli : panneau du bas, x .365–.415, y .760–.835 (mesuré sur la capture VR ; le curseur bouge encore, pas de clic).
+- **0.6.9.12** (base 0.6.9.11, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.11 (rapport DK2VR_Rapport_20260928_164230.zip) : RÉGRESSION, toutes les barres et la minicarte vides (texture HUD vide, capture « écran » noire) ; l'UI réapparaît en partie en pointant le donjon.
+  - Cause : le jeu dessine une couche d'interface de 1024x619 (sonde « cursor-covering draw … size=1024x619 ») ; le critère bigBox (≥8 %×8 %, sans limite haute) la prenait pour une boîte de message -> boxOnly -> exclue de la texture HUD. Correctif : bigBox exige aussi ≤70 % × ≤55 % et d'être ENTIÈREMENT entre 0,085 et 0,72 de hauteur. LEÇON : tout critère « exclure de la texture HUD » doit avoir des bornes hautes de taille et de position.
+
 
 
 
