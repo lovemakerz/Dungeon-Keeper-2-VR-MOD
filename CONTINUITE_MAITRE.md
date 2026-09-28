@@ -117,6 +117,8 @@
   - Les petits éléments 3D des barres (boîtes ~.46–.53 × .77–.85, 34–198 sommets, rhw .155–.166) sont bien envoyés au HUD et dessinés nativement ; MAIS des draws du donjon masqués (colorwrite 0) débordent dans la zone des barres (ex. .515,.60–.824,.795 ; 0,.01–.469,.974) avec rhw plus grand (.16–.19 = plus proches) et ÉCRIVENT LA PROFONDEUR -> les boutons échouent au test Z dans l'image du jeu. Correctif : draw de donjon masqué = aussi ZWRITEENABLE FALSE ; valeur du jeu rétablie au début du draw suivant (sauf si le jeu l'a changée entre-temps).
   - inBar « chaque coin dans une barre » acceptait de GRANDS draws du donjon (ex. .30,.02–.96,.78 : coins dans la barre du haut et du bas) -> morceaux de donjon envoyés au HUD (« morceaux qui bougent dans les barres »). Correctif : inBar seulement si largeur ≤ .30 et hauteur ≤ .14.
   - pickFits = 0 sur toute la session (facteur x0,33) : à examiner (les règles dépendant de pickFits sont inactives).
+- **0.7.3** (base 0.7.2) — seuls les petits draws 3D (≤ .30 × .16) peuvent être classés interface. Rapport DK2VR_Rapport_20260928_215406.zip (2 captures zoom min, 2 zoom max) : sur les agrandissements des captures VR, barres COMPLÈTES aux deux zooms (« 0 », « i », portrait derrière les compteurs présents), aucun morceau de donjon visible ; utilisateur dit en voir encore -> hypothèse : les fonds orange/lave des cases de statistiques sont des textures NATIVES de DK2 (identiques sur l'écran PC). Demande d'une capture annotée avant toute nouvelle modification.
+
 
 
 
