@@ -1,6 +1,4 @@
-# Dungeon Keeper II VR — 0.6.9.4 expérimentale
-
-**Nouveau 0.6.9.4 : touche F12** = active/désactive la sélection sur toute la table (désactivée : textures nettes, mais zone non cliquable au bord de la table).
+# Dungeon Keeper II VR — 0.6.9.5 expérimentale
 
 Le donjon est posé sur **une table fixe devant vous, façon Demeo**. Une poignée fait glisser le donjon sous la main, deux poignées zooment et font tourner le donjon (la vraie caméra du jeu) ; la table elle-même ne bouge pas. L'écran du jeu (avec toute son interface) est affiché en grand en face, comme accroché au mur derrière la table. Les commandes du jeu restent à la souris et au clavier.
 

@@ -610,7 +610,6 @@ struct Host {
             if(key(VK_F3)||key(VK_F6)) {panel=!panel;log("Panneau du jeu (F3) : %s",panel?"affiche":"masque");}
             if(key(VK_F4)) {hud=!hud;log("HUD VR (F4) : %s",hud?"affiche":"masque");}
             if(key(VK_F2)) {minimapMode=(minimapMode+1)%3;log("Minicarte (F2) : %s",minimapMode==0?"piedestal":minimapMode==1?"montre (toujours)":"montre (quand on la regarde)");}
-            if(key(VK_F12)) {pickOff=!pickOff;log("Selection sur toute la table (F12) : %s",pickOff?"desactivee (textures nettes, zone morte au bord)":"activee");}
             if(key(VK_F11)||fs::exists(outputDirectory/L"CAPTURE.request")) {
                 capture=true;std::error_code ec;fs::remove(outputDirectory/L"CAPTURE.request",ec);
             }
@@ -753,7 +752,7 @@ struct Host {
 int wmain(int argc,wchar_t** argv) {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);fs::path root=fs::path(module).parent_path();
     logfile=_wfsopen((root/L"DK2VR-host.log").c_str(),L"w",_SH_DENYNO);
-    log("Dungeon Keeper II VR 0.6.9.4 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
+    log("Dungeon Keeper II VR 0.6.9.5 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
     bool probe=false,noLaunch=false;fs::path game=root/L"Game"/L"DKII-DX.exe";std::wstring arguments=L"-NOMOVIES";
     for(int i=1;i<argc;++i) {
         std::wstring a=argv[i];

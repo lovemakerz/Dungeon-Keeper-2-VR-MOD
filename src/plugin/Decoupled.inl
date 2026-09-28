@@ -439,7 +439,10 @@ void coloredBox(std::vector<OverlayVertex>& mesh,const Pose& pose,Vec3 lo,Vec3 h
 // 0.6.8: rusted iron pedestal (colour variations per part) + side button with an arrow on the column.
 void buildPedestal(const HudLayout& hud,std::vector<OverlayVertex>& mesh,bool hover=false) {
     const Pose& t=hud.pedestalTop;
-    // 0.6.9.3: no more rectangular plate / rim behind the minimap (user request): the round map sits alone on the column.
+    // Plate: the minimap lies on its front face (+Z), 3 cm thick. (0.6.9.5: restored on request, removed in 0.6.9.3.)
+    coloredBox(mesh,t,{-hud.plateW*.5f,-hud.plateH*.5f,-.035f},{hud.plateW*.5f,hud.plateH*.5f,-.004f},0xff5a3522,0xff3b2216);
+    // Rim of darker iron around the plate.
+    coloredBox(mesh,t,{-hud.plateW*.5f-.012f,-hud.plateH*.5f-.012f,-.040f},{hud.plateW*.5f+.012f,hud.plateH*.5f+.012f,-.030f},0xff3e2518,0xff2a170e);
     // Column: vertical, from the floor to under the plate.
     Vec3 under=toWorld(t,{0,-hud.plateH*.25f,-.03f});
     float bottom=hud.pedestalFoot.y,topY=under.y;
