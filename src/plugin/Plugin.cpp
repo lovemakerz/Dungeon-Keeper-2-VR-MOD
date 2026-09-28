@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.7";
+constexpr const char* Version="0.8.8";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -2510,16 +2510,16 @@ struct Renderer {
                 float q[2];memcpy(q,vx,8);bx0=std::min(bx0,q[0]);by0=std::min(by0,q[1]);bx1=std::max(bx1,q[0]);by1=std::max(by1,q[1]);
             }
             if(!marked) ++statOriginUntagged;
-            // 0.8.7: the small 3D buttons of the bottom bars (fold arrows, tabs, '0' / 'i': 4-8 vertices, measured boxes x .38-.56,
-            // y .72-.85 in the 0.8.4 report) are drawn by the same engine code as the dungeon creatures: no origin rule can find them.
+            // 0.8.8: the 3D buttons '0' / 'i' of the bottom bars (24-256 vertices; boxes measured in the 0.7.10 report: x .427-.506 y .761-.866 and
+            // x .520-.554 y .792-.886; 0.8.7 looked for 4-8 vertices in a too small rectangle: it kept dungeon quads and missed the buttons) are drawn by the same engine code as the dungeon creatures: no origin rule can find them.
             // Whatever is that small and lies ENTIRELY in that rectangle is interface (never terrain code). Nothing else is added:
             // 0.8.6 (whole bars / cursor rules) removed dungeon pieces from the table.
-            if(!uiVerts&&count<=8&&uiW>0&&uiH>0) {
+            if(!uiVerts&&count>=24&&count<=256&&uiW>0&&uiH>0) {
                 bool terrain=false;
                 if(firstId>0&&firstId<256) {const uint32_t r=EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k);terrain=(r>=0x587600&&r<0x587700)||(r>=0x588500&&r<0x588600);}
                 const float ihe=std::min(float(uiH),uiW*.75f),iwe=std::min(float(uiW),uiH*4.f/3.f),oye=(uiH-ihe)*.5f,oxe=(uiW-iwe)*.5f;
                 const float x0=(bx0-oxe)/iwe,x1=(bx1-oxe)/iwe,y0=(by0-oye)/ihe,y1=(by1-oye)/ihe;
-                if(!terrain&&x0>=.375f&&x1<=.565f&&y0>=.715f&&y1<=.85f) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statButtonRect;}
+                if(!terrain&&x1-x0<=.10f&&y1-y0<=.13f&&x0>=.405f&&x1<=.575f&&y0>=.745f&&y1<=.90f) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statButtonRect;}
             }
             auto at=[&](UINT n)->uint32_t{return !indices?uint32_t(n):indexFormat==D3DFMT_INDEX32?static_cast<const uint32_t*>(indices)[n]:uint32_t(static_cast<const uint16_t*>(indices)[n]);};
             const bool triangles=type==D3DPT_TRIANGLELIST||type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLEFAN;
