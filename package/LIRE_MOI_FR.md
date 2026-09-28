@@ -1,4 +1,4 @@
-# Dungeon Keeper II VR — 0.8.1 expérimentale
+# Dungeon Keeper II VR — 0.8.2 expérimentale
 
 ## Nouveau en 0.8.0 : interface et donjon séparés par le moteur du jeu
 
