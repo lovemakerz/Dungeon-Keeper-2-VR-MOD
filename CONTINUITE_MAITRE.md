@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.1 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.2 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -113,6 +113,11 @@
   - PREUVE par comparaison : « i » visible en 0.6.9.17, absent en 0.7.0 -> en 0.7.0 on avait retiré les règles rhw (near3 ×3, carte ×2,5) ET ajouté l'effacement de profondeur native. Les deux sont annulés (retour à l'état 0.6.9.17 sur ce point).
   - Barres de nouveau transparentes (HudStoneBacking=0 par défaut).
   - SONDE « Buttons probe » : tout draw touchant la zone des boutons (x .42–.53, y .70–.85 de la cible d'interface) est journalisé avec son chemin (2D interface / 3D->HUD / 3D DUNGEON masqué / visible), boîte, rhw min-max, rhw typique, pickFits, texture ; une image toutes les ~150, 240 lignes max. À LIRE EN PRIORITÉ au prochain rapport pour le « 0 ».
+- **0.7.2** (base 0.7.1, NON TESTÉE) — SONDE du rapport DK2VR_Rapport_20260928_213445.zip (240 lignes « Buttons probe ») = PREUVES :
+  - Les petits éléments 3D des barres (boîtes ~.46–.53 × .77–.85, 34–198 sommets, rhw .155–.166) sont bien envoyés au HUD et dessinés nativement ; MAIS des draws du donjon masqués (colorwrite 0) débordent dans la zone des barres (ex. .515,.60–.824,.795 ; 0,.01–.469,.974) avec rhw plus grand (.16–.19 = plus proches) et ÉCRIVENT LA PROFONDEUR -> les boutons échouent au test Z dans l'image du jeu. Correctif : draw de donjon masqué = aussi ZWRITEENABLE FALSE ; valeur du jeu rétablie au début du draw suivant (sauf si le jeu l'a changée entre-temps).
+  - inBar « chaque coin dans une barre » acceptait de GRANDS draws du donjon (ex. .30,.02–.96,.78 : coins dans la barre du haut et du bas) -> morceaux de donjon envoyés au HUD (« morceaux qui bougent dans les barres »). Correctif : inBar seulement si largeur ≤ .30 et hauteur ≤ .14.
+  - pickFits = 0 sur toute la session (facteur x0,33) : à examiner (les règles dépendant de pickFits sont inactives).
+
 
 
 
