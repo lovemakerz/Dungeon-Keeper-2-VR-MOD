@@ -1,4 +1,4 @@
-# Dungeon Keeper II VR — 0.6.9.9 expérimentale
+# Dungeon Keeper II VR — 0.6.9.10 expérimentale
 
 Le donjon est posé sur **une table fixe devant vous, façon Demeo**. Une poignée fait glisser le donjon sous la main, deux poignées zooment et font tourner le donjon (la vraie caméra du jeu) ; la table elle-même ne bouge pas. L'écran du jeu (avec toute son interface) est affiché en grand en face, comme accroché au mur derrière la table. Les commandes du jeu restent à la souris et au clavier.
 

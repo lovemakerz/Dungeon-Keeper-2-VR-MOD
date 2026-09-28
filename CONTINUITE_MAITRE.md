@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.9 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.10 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -73,6 +73,11 @@
   - Élément qui disparaît : les portraits/cartes que le jeu anime en 3D au survol sont rejoués dans la cible HUD (uiReplay) avec le test de profondeur du jeu (tampon de profondeur du donjon) -> masqués. uiReplay coupe désormais ZENABLE/ZWRITEENABLE (restaurés après).
   - Messages : draw unique ≥8 %×4 % ou union ≥30 %×10 % entre les barres ; les draws au curseur comptent quand le panneau est affiché et que le laser n'est pas sur la table (pointage de la boîte). Panneau messages placé AU-DESSUS de la barre de vie (layoutHud stack) ; options inchangées (whole, sous la barre de vie).
   - Main du gardien : les boîtes de message (draws ≥8 %×4 %) sont effacées de la fenêtre « objet tenu ».
+- **0.6.9.10** (base 0.6.9.9, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.9 (rapport DK2VR_Rapport_20260928_132415.zip) : notifications/objectifs pointables et validables OK ; RÉGRESSION : barres vides (portraits, icônes du panneau absents, aussi dans la texture HUD) ; notification encore sur la main quand on prend quelque chose.
+  - Régression : la coupure du test de profondeur dans uiReplay (0.6.9.9) — le jeu ordonne ses pièces de panneau par profondeur (fond de pierre devant les portraits sinon). ANNULÉE : états de profondeur du jeu conservés. LEÇON : ne jamais toucher ZENABLE/ZWRITE dans uiReplay.
+  - Élément disparaissant au survol : draw 3D entièrement dans le panneau du bas (haut ≥ 0,76) -> HUD sans condition (pickFits non requis).
+  - Main : boîte ≥8 %×8 % = message même sous le curseur (bigBox) ; ses pièces (et celles dans la boîte de l'image précédente, prevBox) vont au panneau messages ; boîte effacée de la fenêtre « objet tenu » ; la fenêtre « objet tenu » reste active pendant un message (pas pendant les options).
+
 
 
 
