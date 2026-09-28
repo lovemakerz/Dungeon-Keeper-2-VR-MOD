@@ -228,6 +228,7 @@ struct Package {
     uint32_t screen=0;                              // 0.6.9: wall screen texture (only what lies between the bars)
     bool screenShown=false;                         // 0.6.7.1: wall screen (options / menus) visible
     bool screenWhole=true;                          // 0.6.9.8: options (whole area, HUD texture) vs messages (screen texture)
+    HudRegion msgRegion{0,0,0,0};                   // 0.6.9.11: message box rectangle (fractions of the game area)
     float pickDistance=0;                           // 0.6.7: laser distance to the dungeon geometry (0: none)
     Pose table{};float tableWidth=1;              // table pose/width of the request used by this game frame
     bool panning=false;int panHand=0;Vec3 panFrom{}; // hand position whose native pan produced this frame
@@ -888,7 +889,7 @@ struct VrThread {
         const float depthRatio=p.tableWidth>0?p.tableDepth/p.tableWidth:.75f;
         // 0.6.1: HUD modules (layout shared with the game thread), laser length from this frame's hit.
         HudLayout hud;const bool hudOn=p.hud&&texture(p.hud)&&p.hudWidth>=64;
-        if(hudOn) hud=layoutHud(r,p.hudSizes,tableAspect>0?tableAspect:depthRatio,p.hudTop,float(p.hudWidth),float(p.hudHeight),p.screenShown,p.pedestalSide,p.screenWhole);
+        if(hudOn) hud=layoutHud(r,p.hudSizes,tableAspect>0?tableAspect:depthRatio,p.hudTop,float(p.hudWidth),float(p.hudHeight),p.screenShown,p.pedestalSide,p.screenWhole,&p.msgRegion);
         Request rr=r;
         bool buttonLaser=false;
         if(r.pointerFlags&PointerAimValid) {

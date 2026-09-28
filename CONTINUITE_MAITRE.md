@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.10 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.11 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -77,6 +77,11 @@
   - Régression : la coupure du test de profondeur dans uiReplay (0.6.9.9) — le jeu ordonne ses pièces de panneau par profondeur (fond de pierre devant les portraits sinon). ANNULÉE : états de profondeur du jeu conservés. LEÇON : ne jamais toucher ZENABLE/ZWRITE dans uiReplay.
   - Élément disparaissant au survol : draw 3D entièrement dans le panneau du bas (haut ≥ 0,76) -> HUD sans condition (pickFits non requis).
   - Main : boîte ≥8 %×8 % = message même sous le curseur (bigBox) ; ses pièces (et celles dans la boîte de l'image précédente, prevBox) vont au panneau messages ; boîte effacée de la fenêtre « objet tenu » ; la fenêtre « objet tenu » reste active pendant un message (pas pendant les options).
+- **0.6.9.11** (base 0.6.9.10, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.10 (rapport DK2VR_Rapport_20260928_134021.zip) : barres de nouveau complètes ; MAIS (1) bouton « 0 » / portrait du diablotin disparaissent sous le laser (éléments animés en 3D au survol) ; (2) créatures prises absentes de la main + petites icônes du nombre tenu en haut de la notification + silhouette de la créature découpée par la notification ; zone de pointage sur la table réduite pendant un message ; (3) bouton de repli du panneau (« Basculer le panneau ») : inutile, bogue une fois replié -> à désactiver.
+  - (1) Draw 3D ≤64 sommets entièrement dans une des 4 régions de barre (HudRegions 0..3, ±0,005) -> HUD.
+  - (2) Pièces de boîte de message (bigBox, ou dans la boîte précédente hors curseur quand le laser est sur la table) : UNIQUEMENT dans la texture « screen » (boxOnly : pas dans la texture HUD) -> la fenêtre de la main n'a plus de boîte, plus d'effacement (qui supprimait la créature). Panneau messages = rectangle de la boîte / union (msgRegion, marge 1 %, Package::msgRegion, layoutHud msg), même échelle et même position horizontale que sur l'écran du jeu -> ne capte plus le laser au-dessus de la table.
+  - (3) Clics bloqués sur le bouton de repli : panneau du bas, x .365–.415, y .760–.835 (mesuré sur la capture VR ; le curseur bouge encore, pas de clic).
+
 
 
 

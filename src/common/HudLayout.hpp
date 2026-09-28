@@ -37,9 +37,9 @@ struct HudLayout {
     // 0.6.8: button on the pedestal column (moves the pedestal to the other side of the table).
     bool button=false;Pose buttonPose{};float buttonW=0,buttonH=0;bool arrowRight=false;
 };
-inline void hudPixels(int i,float W,float H,float& x0,float& y0,float& x1,float& y1,bool screenWhole=false) {
+inline void hudPixels(int i,float W,float H,float& x0,float& y0,float& x1,float& y1,bool screenWhole=false,const HudRegion* msg=nullptr) {
     const float iw=std::min(W,H*4.f/3.f),ih=std::min(H,W*3.f/4.f),ox=(W-iw)*.5f,oy=(H-ih)*.5f;
-    const HudRegion& r=(screenWhole&&i==HudScreen)?HudScreenWhole:HudRegions[i];
+    const HudRegion& r=(screenWhole&&i==HudScreen)?HudScreenWhole:(msg&&i==HudScreen)?*msg:HudRegions[i];
     x0=ox+r.u0*iw;y0=oy+r.v0*ih;x1=ox+r.u1*iw;y1=oy+r.v1*ih;
 }
 inline Quat hudFacing(Vec3 from,Vec3 to,float tiltDegrees) {
@@ -50,13 +50,16 @@ inline Quat hudFacing(Vec3 from,Vec3 to,float tiltDegrees) {
 // pedestalSide: 0 = beside the pointing hand's opposite side (handedness), 1 = left, 2 = right of the table.
 // 0.6.9.8: whole = options screen (game paused: game area + statistics bar from the full interface texture);
 // otherwise screen = game messages / objectives (middle region only, from the filtered screen texture).
-inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,float dungeonTop,float W,float H,bool screen=false,int pedestalSide=0,bool whole=true) {
+inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,float dungeonTop,float W,float H,bool screen=false,int pedestalSide=0,bool whole=true,const HudRegion* msg=nullptr) {
+    // 0.6.9.11: msg = rectangle of the message box / objectives page (fractions of the game area); the message
+    // panel shows only that (0.6.9.10: the whole middle area, mostly transparent, caught the laser over the table).
+    if(msg&&(msg->u1<=msg->u0||msg->v1<=msg->v0)) msg=nullptr;
     HudLayout L;
     if(W<64||H<64) return L;
     auto set=[&](int i,const Pose& p,float width){
-        HudPanel& q=L.panel[i];hudPixels(i,W,H,q.x0,q.y0,q.x1,q.y1,screen&&whole);
+        HudPanel& q=L.panel[i];hudPixels(i,W,H,q.x0,q.y0,q.x1,q.y1,screen&&whole,whole?nullptr:msg);
         q.pose=p;q.w=width;q.h=width*(q.y1-q.y0)/std::max(1.f,q.x1-q.x0);q.shown=true;};
-    auto height=[&](int i,float width){float x0,y0,x1,y1;hudPixels(i,W,H,x0,y0,x1,y1,screen&&whole);return width*(y1-y0)/std::max(1.f,x1-x0);};
+    auto height=[&](int i,float width){float x0,y0,x1,y1;hudPixels(i,W,H,x0,y0,x1,y1,screen&&whole,whole?nullptr:msg);return width*(y1-y0)/std::max(1.f,x1-x0);};
     const bool floorKnown=r.handFlags&RequestFloorKnown;
     const float floorY=floorKnown?r.floorY:r.table.position.y-.78f;
     const Vec3 head=scale(add(r.eyes[0].pose.position,r.eyes[1].pose.position),.5f);
@@ -83,7 +86,9 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
         else {set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y+hs*.5f,0}}),w);y+=hs;}
         set(HudTop,compose(bottom,Pose{{0,0,0,1},{0,y+gap+ht*.5f,0}}),w);y+=gap+ht;
         // 0.6.9.9: game messages / objectives ABOVE every bar (health bar included); the options screen keeps its place.
-        if(screen&&!whole) {const float hsc=height(HudScreen,w);set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+gap+hsc*.5f,0}}),w);}};
+        if(screen&&!whole) {const float wm=msg?w*(msg->u1-msg->u0):w,hsc=height(HudScreen,wm); // same scale as the bars
+            const float xm=msg?w*((msg->u0+msg->u1)*.5f-.5f):0.f; // same horizontal place as on the game screen
+            set(HudScreen,compose(bottom,Pose{{0,0,0,1},{xm,y+gap+hsc*.5f,0}}),wm);}};
     if(r.pointerFlags&HudBottomNear) {
         const float w=std::min(s.bottom,.45f)*1.15f,h=height(HudBottom,w),tilt=-60.f;
         stack(compose(side,Pose{pitch(tilt*Pi/180.f),{0,.02f+h*.5f*std::cos(tilt*Pi/180.f),along+.10f}}),w);
