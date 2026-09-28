@@ -1,4 +1,4 @@
-// DK2VR 0.6.9.6 - texture detail fix with exact addresses; options screen closes again; UI-over-bars test tolerant; pedestal column under the plate. 0.6.9.5 - texture detail follows the focal factor (21 LOD compares redirected); F12 removed; pedestal plate restored. 0.6.9.4 - crash log (exception handler); interface over the bars kept out of the table while the table fits between them; F12 toggles whole-table picking. 0.6.9.3.1 - host linked to openxr_loader.dll (was libopenxr_loader.dll: start failure). 0.6.9.3 - options screen whole (stats bar included) and steady under the laser; pedestal plate removed; adaptive focal factor (sharper textures); 3D interface pieces over the bottom bars kept out of the table; JPG captures; system OpenXR runtime. 0.6.9.2 - whole-table picking fixed (view setup 0x575A00 hooked: tile selection uses the same focal); options screen stacked on the timer bar under the health bar; VDXR runtime preferred. 0.6.9.1 - picking off, options screen stacked. 0.6.9 - whole table pickable (game camera focal widened while the table is shown); wall screen from middle draws only; original room textures; glow hands; smaller pedestal button. 0.6.8 - wall screen detection ignores held model/cursor area; smaller held creature; rusted pedestal with side button, drawn before the tray; earthen room. 0.6.7.1 - wall screen only when a menu/options screen is open; held window only with the laser on the table, scaled like the hand. 0.6.7 - laser picks the dungeon triangles; hand size fixed; held window wider; wall = whole game area, bars stacked over the panel. 0.6.6.1 - interface-texture filter off (game texture cache blocks are shared by UI and world). 0.6.6 - laser on the table drives the game cursor (inverse projection), trigger/A = clicks. 0.6.5.3 - held things = HUD window around the cursor (panels erased); 3D interface cards out of the dungeon. 0.6.5.2 - held things only near the cursor and outside panels the cursor is not on. 0.6.5.1 - top-down: engine rectangle = projected table (exact); game screen panel off (F3); texture upload callers measured. 0.5.15 - far distance x3 with the top-down camera (cross-shaped table when zoomed out). 0.5.14 - no near-edge shift with the top-down camera, wider side margin. 0.5.13 - steep (top-down) game camera while the table is shown. 0.5.12 - table near edge follows the nearest geometry the game draws. 0.5.11 - texture cache patch address fixed, table near edge kept in the engine's reach. 0.5.10 - real texture cache (SurfHashList2 512 -> 1536), pan prediction limited. 0.5.9 - larger player-side / side margins (holes while dragging). 0.5.8 - table depth shared between far and player sides (player-side strip), far from the screen far edge. 0.5.7 - vertical enlargement on both screen edges again (player side filled in 0.5.2), far limited to the corner ratio. 0.5.6 - texture cache byte+hook+real count, far distance for the far corners. 0.5.5 - texture cache 256 blocks (constructor call), far edge fixed / sides+player side only. 0.5.4.1 - fix: lockBuf/unlockBuf wrappers used wrong stack sizes (crash at start). 0.5.4 - near corners (+30 % player side), surface-lock measurement. 0.5.3 - game texture shadow (no GPU wait on texture locks), no fresh-image wait, wider corner margin. 0.5.2 - table view exactly as validated in 0.4.7 (TileCover removed) + VR state cache, full resolution, ceiling clip. Was 0.5.0 (base 0.4.7) - VR state cache, full headset resolution, engine tiles = table (corners), ceiling clip. 0.4.7 - table shows the whole PC screen view (TableView), anisotropic x16 VR textures, table 0.50 m below the eyes.
+// DK2VR 0.6.9.7 - options panel follows the game pause (0x527270); game exit logged; 3D interface cards out of the table; minimap crop; auto recenter. 0.6.9.6 - texture detail fix with exact addresses; options screen closes again; UI-over-bars test tolerant; pedestal column under the plate. 0.6.9.5 - texture detail follows the focal factor (21 LOD compares redirected); F12 removed; pedestal plate restored. 0.6.9.4 - crash log (exception handler); interface over the bars kept out of the table while the table fits between them; F12 toggles whole-table picking. 0.6.9.3.1 - host linked to openxr_loader.dll (was libopenxr_loader.dll: start failure). 0.6.9.3 - options screen whole (stats bar included) and steady under the laser; pedestal plate removed; adaptive focal factor (sharper textures); 3D interface pieces over the bottom bars kept out of the table; JPG captures; system OpenXR runtime. 0.6.9.2 - whole-table picking fixed (view setup 0x575A00 hooked: tile selection uses the same focal); options screen stacked on the timer bar under the health bar; VDXR runtime preferred. 0.6.9.1 - picking off, options screen stacked. 0.6.9 - whole table pickable (game camera focal widened while the table is shown); wall screen from middle draws only; original room textures; glow hands; smaller pedestal button. 0.6.8 - wall screen detection ignores held model/cursor area; smaller held creature; rusted pedestal with side button, drawn before the tray; earthen room. 0.6.7.1 - wall screen only when a menu/options screen is open; held window only with the laser on the table, scaled like the hand. 0.6.7 - laser picks the dungeon triangles; hand size fixed; held window wider; wall = whole game area, bars stacked over the panel. 0.6.6.1 - interface-texture filter off (game texture cache blocks are shared by UI and world). 0.6.6 - laser on the table drives the game cursor (inverse projection), trigger/A = clicks. 0.6.5.3 - held things = HUD window around the cursor (panels erased); 3D interface cards out of the dungeon. 0.6.5.2 - held things only near the cursor and outside panels the cursor is not on. 0.6.5.1 - top-down: engine rectangle = projected table (exact); game screen panel off (F3); texture upload callers measured. 0.5.15 - far distance x3 with the top-down camera (cross-shaped table when zoomed out). 0.5.14 - no near-edge shift with the top-down camera, wider side margin. 0.5.13 - steep (top-down) game camera while the table is shown. 0.5.12 - table near edge follows the nearest geometry the game draws. 0.5.11 - texture cache patch address fixed, table near edge kept in the engine's reach. 0.5.10 - real texture cache (SurfHashList2 512 -> 1536), pan prediction limited. 0.5.9 - larger player-side / side margins (holes while dragging). 0.5.8 - table depth shared between far and player sides (player-side strip), far from the screen far edge. 0.5.7 - vertical enlargement on both screen edges again (player side filled in 0.5.2), far limited to the corner ratio. 0.5.6 - texture cache byte+hook+real count, far distance for the far corners. 0.5.5 - texture cache 256 blocks (constructor call), far edge fixed / sides+player side only. 0.5.4.1 - fix: lockBuf/unlockBuf wrappers used wrong stack sizes (crash at start). 0.5.4 - near corners (+30 % player side), surface-lock measurement. 0.5.3 - game texture shadow (no GPU wait on texture locks), no fresh-image wait, wider corner margin. 0.5.2 - table view exactly as validated in 0.4.7 (TileCover removed) + VR state cache, full resolution, ceiling clip. Was 0.5.0 (base 0.4.7) - VR state cache, full headset resolution, engine tiles = table (corners), ceiling clip. 0.4.7 - table shows the whole PC screen view (TableView), anisotropic x16 VR textures, table 0.50 m below the eyes.
 // DK2VR 0.4.4 - wooden tray bottom under the dungeon (instead of the dark plate).
 // DK2VR 0.4.3 - room prepared from the game start at normal priority, disk cache (Cache\DK2VR_room.cache),
 //                SSE2 floating point for the generators (0.4.2 measured 18 s in the background).
@@ -63,7 +63,7 @@ using Microsoft::WRL::ComPtr;
 using namespace dk2vr;
 
 namespace {
-constexpr const char* Version="0.6.9.6";
+constexpr const char* Version="0.6.9.7";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -722,6 +722,26 @@ struct LensHack {
         return {cx+(a.left-cx)*k,cy+(a.top-cy)*k,cx+(a.right-cx)*k,cy+(a.bottom-cy)*k};
     }
 };
+// 0.6.9.7: game pause state. 0x527270 (thiscall, 1 arg: 1 = pause, 0 = resume; verified in the 1.70 exe) sets
+// +0x284 (paused) of the game object; called by the interface pause command (options screen) and on resume.
+// The options panel follows this flag instead of guessing from the draws (0.6.9.5/0.6.9.6: stayed open).
+struct PauseWatch {
+    using Fn=void(__fastcall*)(void*,void*,int);
+    inline static Fn original=nullptr;inline static volatile LONG paused=-1;inline static volatile LONG changes=0;
+    static void __fastcall hook(void* self,void* edx,int on) {original(self,edx,on);paused=on?1:0;InterlockedIncrement(&changes);}
+    static void install(uintptr_t base) {
+        auto* entry=reinterpret_cast<unsigned char*>(base+0x127270);
+        const unsigned char sig[]={0x8b,0x44,0x24,0x04,0x85,0xc0,0x8b,0x81,0x84,0x02,0x00,0x00};
+        if(memcmp(entry,sig,sizeof(sig))) {log("Pause watch: signature unsupported (options panel from the draws only)");return;}
+        auto* t=static_cast<unsigned char*>(VirtualAlloc(nullptr,16,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE));if(!t) return;
+        memcpy(t,entry,6);t[6]=0xe9;int32_t back=int32_t(reinterpret_cast<uintptr_t>(entry+6)-reinterpret_cast<uintptr_t>(t+11));memcpy(t+7,&back,4);
+        DWORD old=0;VirtualProtect(t,16,PAGE_EXECUTE_READ,&old);original=reinterpret_cast<Fn>(t);
+        if(!VirtualProtect(entry,6,PAGE_EXECUTE_READWRITE,&old)) {original=nullptr;return;}
+        unsigned char jump[6]={0xe9,0,0,0,0,0x90};int32_t rel=int32_t(reinterpret_cast<uintptr_t>(&hook)-reinterpret_cast<uintptr_t>(entry+5));memcpy(jump+1,&rel,4);
+        memcpy(entry,jump,6);DWORD ig=0;VirtualProtect(entry,6,old,&ig);FlushInstructionCache(GetCurrentProcess(),entry,6);
+        log("Pause watch: game pause function 0x527270 hooked");
+    }
+};
 struct TopDownCamera {
     using Rebuild=void(__thiscall*)(void*);
     inline static Rebuild rebuild=nullptr;
@@ -820,7 +840,35 @@ struct CrashLog {
         log("%s",line.c_str());
         return EXCEPTION_CONTINUE_SEARCH;
     }
-    static void install() {if(AddVectoredExceptionHandler(1,&handler)) log("Crash log: exception handler installed");}
+    // 0.6.9.7: the game quits by itself (exit code -1, no exception) after a click on the dungeon: its own exit path
+    // (CRT 0x637368 / 0x638640 ExitProcess, 0x6372DE TerminateProcess) is logged with the code addresses on the stack.
+    using ExitFn=void(WINAPI*)(UINT);using TermFn=BOOL(WINAPI*)(HANDLE,UINT);
+    static inline ExitFn realExit=nullptr;static inline TermFn realTerminate=nullptr;
+    static void stackLine(const char* what,UINT code,const void* sp) {
+        std::string line;char b[128];snprintf(b,sizeof(b),"%s(%d) thread %lu ; stack:",what,int(code),(unsigned long)GetCurrentThreadId());line=b;
+        MEMORY_BASIC_INFORMATION m{};
+        if(VirtualQuery(sp,&m,sizeof(m))&&m.State==MEM_COMMIT) {
+            const size_t got=std::min<size_t>(1024,(reinterpret_cast<uintptr_t>(m.BaseAddress)+m.RegionSize-reinterpret_cast<uintptr_t>(sp))/4);
+            const DWORD* st=static_cast<const DWORD*>(sp);int n=0;
+            for(size_t i=0;i<got&&n<40;++i) {std::string w=where(st[i]);if(!w.empty()&&w!="?") {line+=" "+w;++n;}}
+        }
+        log("%s",line.c_str());
+    }
+    static void WINAPI exitHook(UINT code) {int marker=0;stackLine("GAME EXIT: ExitProcess",code,&marker);realExit(code);}
+    static BOOL WINAPI terminateHook(HANDLE h,UINT code) {int marker=0;if(h==GetCurrentProcess()||GetProcessId(h)==GetCurrentProcessId()) stackLine("GAME EXIT: TerminateProcess",code,&marker);return realTerminate(h,code);}
+    static void hookIat(uintptr_t base,uint32_t slot,void* hook,void** real,const char* name) {
+        void** entry=reinterpret_cast<void**>(base-0x400000+slot);
+        HMODULE k=GetModuleHandleA("kernel32.dll");void* expected=k?reinterpret_cast<void*>(GetProcAddress(k,name)):nullptr;
+        if(!expected||*entry!=expected) {log("Crash log: %s import not recognized, not hooked",name);return;}
+        DWORD old=0;if(!VirtualProtect(entry,4,PAGE_READWRITE,&old)) return;
+        *real=*entry;*entry=hook;DWORD ig=0;VirtualProtect(entry,4,old,&ig);
+    }
+    static void install(uintptr_t base=0) {
+        if(AddVectoredExceptionHandler(1,&handler)) log("Crash log: exception handler installed");
+        if(base) {hookIat(base,0x66c234,reinterpret_cast<void*>(&exitHook),reinterpret_cast<void**>(&realExit),"ExitProcess");
+                  hookIat(base,0x66c1f8,reinterpret_cast<void*>(&terminateHook),reinterpret_cast<void**>(&realTerminate),"TerminateProcess");
+                  log("Crash log: game exit paths watched");}
+    }
 };
 struct Profiler;
 // Sampling profiler (diagnostic): every ~2 ms the game render thread is briefly suspended and its
@@ -859,7 +907,7 @@ struct Profiler {
         log("%s",line.c_str());
     }
     void start(DWORD threadId) {
-        static bool crashLog=false;if(!crashLog) {crashLog=true;CrashLog::install();}
+        static bool crashLog=false;if(!crashLog) {crashLog=true;CrashLog::install(reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)));}
         if(thread||iniInt(L"Profiler",1)==0) return;
         thread=OpenThread(THREAD_SUSPEND_RESUME|THREAD_GET_CONTEXT|THREAD_QUERY_INFORMATION,FALSE,threadId);
         if(!thread) return;
@@ -1364,7 +1412,7 @@ struct Renderer {
     ComPtr<IDirect3DTexture9> uiTex;ComPtr<IDirect3DSurface9> uiSurf,cursorBackup;UINT uiW=0,uiH=0;bool uiCleared=false,uiFailed=false,hudErase=true;
     bool cursorFound=false,cursorBacked=false;RECT cursorRect{},cursorSaved{};uint32_t cursorCopy=0;float cursorUv[4]{},cursorW=0,cursorH=0,cursorHotX=0,cursorHotY=0;
     float cursorPx=-1,cursorPy=-1;bool cursorKnown=false;bool holdingThings=false,heldModel=false;float heldBox[4]{};bool heldCleared=false,keeperHeld=true;float heldRadius=200,heldPx=0,heldPy=0;ComPtr<IDirect3DTexture9> heldTex;ComPtr<IDirect3DSurface9> heldSurf;bool heldWindow=true,uiTexFilter=false;std::unordered_set<void*> uiTextures;uint64_t statUiIn3d=0;uint64_t statHeldDraws=0,statHeldFrames=0,statHeldFar=0,statHeldPanel=0,statHoldCount=0,statUiFrames=0;bool handToController=true,cursorFromUi=false;int firstUiLogs=0;UINT backW=0,backH=0;uint64_t lastUiProbe=0;DWORD probeCursorInfo[4]{};HudSizes hudSizes{};
-    bool ui3dFilter=true,pickFits=false;int uiDiagLogs=0;float worldRhw=0;uint64_t statUi3d=0;float pickMin=.30f,pickTop=.07f,pickBottom=.68f,pickWant=1.f;uint64_t pickLogs=0;
+    bool ui3dFilter=true,pickFits=false;int uiDiagLogs=0;uint64_t statCards=0;float worldRhw=0;uint64_t statUi3d=0;float pickMin=.30f,pickTop=.07f,pickBottom=.68f,pickWant=1.f;uint64_t pickLogs=0;
     float pickScale=.34f;ComPtr<IDirect3DTexture9> screenTex;ComPtr<IDirect3DSurface9> screenSurf;bool screenCleared=false,screenFailed=false;int pedestalSide=0;bool buttonHover=false;uint64_t statButtonClicks=0;bool screenActive=false,lastPointerOnTable=false;int screenHold=0;float midX0=1e9f,midY0=1e9f,midX1=-1e9f,midY1=-1e9f;uint64_t statScreenFrames=0;bool pickActive=false,pickFound=false,lastPickValid=false;float pickT=0,lastPickDist=0,lastPickFx=0,lastPickFy=0;uint64_t statPickHits=0,statPlaneHits=0;Vec3 pickO{},pickD{};Projection pointerLens{};bool pointerLensOk=false,tablePointer=true;uint64_t statTableHits=0,statTableClicks=0;float lastTableX=0,lastTableY=0;UINT lastHudW=0,lastHudH=0;float lastHudTop=0;bool hudLatchL=false,hudLatchR=false,hudTrigBefore=false,hudSecondBefore=false;int hudTarget=-1;
     uint64_t statUiDraws=0,statCursorFrames=0,statHudFrames=0,statHudHits=0,statHudClicks=0;float lastPointerX=-1,lastPointerY=-1;
     bool loggedDepthState=false;
@@ -1488,6 +1536,7 @@ struct Renderer {
         batched=iniInt(L"BatchedRendering",1)!=0;
         ViewExpand::install(native);
         topDown.init(native);
+        PauseWatch::install(native.base);
         LensHack::install(native.base);pickScale=iniFloat(L"TablePickScale",.30f,.15f,1.f);
         // 0.6.9.3: the focal factor is now the LARGEST one that still puts the whole table between the bars
         // (TablePickScale = lower limit): x0.30 fixed made the game choose low-resolution textures.
@@ -2145,7 +2194,11 @@ struct Renderer {
              const float ih=std::min(float(uiH),uiW*.75f),oy=(uiH-ih)*.5f,ty=(y0-oy)/ih,by=(y1-oy)/ih,cy=((y0+y1)*.5f-oy)/ih;
              const bool overBars=pickFits&&(ty>=std::max(pickBottom,.69f)||cy>=.74f||by<=std::min(pickTop,.07f));
              if(!overBars&&by>.69f&&uiDiagLogs<30&&y1-y0>.02f*ih) {++uiDiagLogs;log("3D draw reaching the bars kept in the dungeon: y %.2f-%.2f count %u fits %d",ty,by,count,int(pickFits));}
-             if(overBars||(near3&&count<=256&&cy>.69f)) {++statUi3d;if(hudWanted()) uiReplay(d,type,primitives,verts,stride,indices,indexFormat,count,fvf);return;}
+             // 0.6.9.7: interface card the game animates in 3D next to the cursor (creature portrait picked from the
+             // panel, 0.6.9.6 capture): a few vertices, every one much nearer the camera than the dungeon (rhw > 2.5x).
+             const bool card=worldRhw>0&&count<=8&&r0>worldRhw*2.5f; // 2.5x: wall-top torches stay in the dungeon when zoomed in
+             if(card) ++statCards;
+             if(overBars||card||(near3&&count<=256&&cy>.69f)) {++statUi3d;if(hudWanted()) uiReplay(d,type,primitives,verts,stride,indices,indexFormat,count,fvf);return;}
          }}
         Projection lens{};
         if(!native.lens(lens)) {++rejected;return;}
@@ -2598,7 +2651,10 @@ struct Renderer {
             }
             p->pickDistance=lastPickDist;
             {const float iw=std::min(float(uiW),uiH*4.f/3.f),ih=std::min(float(uiH),uiW*.75f);
-             {const float kw=screenActive?.30f:.40f,kh=screenActive?.20f:.30f; if(midX1-midX0>kw*iw&&midY1-midY0>kh*ih) screenHold=30; else if(screenHold>0) --screenHold;}
+             {const float kw=screenActive?.30f:.40f,kh=screenActive?.20f:.30f;const bool big=midX1-midX0>kw*iw&&midY1-midY0>kh*ih;
+              // 0.6.9.7: with the pause watch, the panel is shown exactly while the game is paused (options screen).
+              if(PauseWatch::paused>=0) screenHold=PauseWatch::paused?30:0;
+              else if(big) screenHold=30; else if(screenHold>0) --screenHold;}
              screenActive=screenHold>0;if(screenActive) ++statScreenFrames;
              midX0=midY0=1e9f;midX1=midY1=-1e9f;}
             p->screenShown=screenActive;
@@ -2663,10 +2719,10 @@ struct Renderer {
             log("Keeper hand (software cursor): %llu images set, %llu captured, %llu failures, last %dx%d hotspot %d,%d, %u bpp, key %08X, %u opaque pixels",
                 (unsigned long long)keeper.calls,(unsigned long long)keeper.captures,(unsigned long long)keeper.failures,keeper.w,keeper.h,keeper.hotX,keeper.hotY,keeper.lastBits,keeper.lastKey,keeper.lastOpaque);
             keeper.calls=keeper.captures=0;
-            log("Wall screen (options/menus) shown in %llu frames",(unsigned long long)statScreenFrames);statScreenFrames=0;
+            log("Wall screen (options/menus) shown in %llu frames (game paused flag %ld, changes %ld)",(unsigned long long)statScreenFrames,long(PauseWatch::paused),long(PauseWatch::changes));statScreenFrames=0;
             log("Table picking: game camera focal x%.2f (wanted x%.2f), projection setups %ld",float(LensHack::applied),float(LensHack::want),long(InterlockedExchange(&LensHack::calls,0)));
             log("Table pointer: %llu frames on the table (%llu on dungeon geometry, %llu on the flat table), %llu clicks, last point %.3f,%.3f",(unsigned long long)statTableHits,(unsigned long long)statPickHits,(unsigned long long)statPlaneHits,(unsigned long long)statTableClicks,lastTableX,lastTableY);statTableHits=statTableClicks=statPickHits=statPlaneHits=0;
-            log("Interface in 3D over the bottom bars (0.6.9.3, Ui3DFilter=%d): %llu draws moved to the HUD, typical dungeon rhw %.4f",int(ui3dFilter),(unsigned long long)statUi3d,worldRhw);statUi3d=0;
+            log("Interface in 3D (Ui3DFilter=%d): %llu draws moved to the HUD (%llu near-camera cards), typical dungeon rhw %.4f",int(ui3dFilter),(unsigned long long)statUi3d,(unsigned long long)statCards,worldRhw);statUi3d=0;statCards=0;
             log("Interface cards kept out of the dungeon: %llu draws (%zu interface textures)",(unsigned long long)statUiIn3d,uiTextures.size());statUiIn3d=0;uiTextures.clear();
             log("Held things (window=%d): %llu/%llu frames, %llu pieces moved to the hand, rejected %llu far from cursor / %llu in a panel, game hand count>0 in %llu frames",int(heldWindow),(unsigned long long)statHeldFrames,(unsigned long long)statUiFrames,(unsigned long long)statHeldDraws,(unsigned long long)statHeldFar,(unsigned long long)statHeldPanel,(unsigned long long)statHoldCount);statHeldFrames=statHeldDraws=statHeldFar=statHeldPanel=statHoldCount=statUiFrames=0;
             log("Keeper hand (3D cursor): found in %llu frames, %.1f draws/frame, last nearest rhw %.4f vs typical %.4f, cursor %.0f,%.0f in %ux%u",

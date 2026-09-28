@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.6 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.7 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -57,6 +57,13 @@
   - (4) Cause : 0.6.9.3 comptait tous les draws près du curseur une fois l'écran actif -> curseur + infobulle suffisaient à le maintenir. Désormais, écran actif : seuls les draws dans un petit voisinage du sprite curseur sont ignorés (0,5R..1R) et seuil relâché 30 %x20 % ; activation inchangée (40 %x30 %, exclusion large) ; maintien 30 images.
   - (1) pickFits exigeait s≥0,98 alors que le lissage laisse 3 % d'écart -> souvent faux. Seuil 0,90 ; en plus, centre ≥0,74 suffit. Diagnostic : « 3D draw reaching the bars kept in the dungeon: y … count … fits … » (30 max).
   - (3) Haut de colonne sous l'arrière de la plaque (point -0,40 plateH, -6 cm, -2 cm) ; bouton recalé pareil (HudLayout.hpp).
+- **0.6.9.7** (base 0.6.9.6, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.6 (rapport DK2VR_Rapport_20260928_102751.zip) : « Texture detail: 21 level compares follow the focal factor » ACTIF, capture 1 nette (flou RÉSOLU a priori, non commenté par l'utilisateur) ; carte portrait (créature) animée en 3D dans le donjon ; minicarte coupée à droite + morceau beige à gauche ; barre de vie ne redescend pas (écran options toujours « shown ~120-160/5 s ») ; crash au clic sur le donjon (code -1, aucune exception : sortie volontaire du jeu). Demande : recentrage auto 5 s après lancement.
+  - Options : RE -> 0x527270 = setPaused(thiscall, arg 1/0) de l'objet jeu (+0x284 paused, +0x280 sauvegarde), appelée par la commande pause de l'interface (0x5137F3) et à la reprise (0x50EA09). Hook (6 octets, signature 12 octets) -> PauseWatch::paused. Le panneau options suit ce drapeau (affiché ssi pause) ; repli sur l'ancienne détection si le hook n'a jamais été appelé. Journal : « Wall screen … (game paused flag X, changes N) ». Observation antérieure : pendant les options, logic ticks à 0,00 ms/tick (jeu en pause).
+  - Crash : ExitProcess/TerminateProcess de l'exe interceptés via l'IAT (0x66C234 / 0x66C1F8 ; appelants CRT 0x637368, 0x638640, 0x6372DE) -> ligne « GAME EXIT: … stack: » avec les adresses de code sur la pile. À analyser au prochain crash.
+  - Cartes 3D : draw ≤8 sommets dont tous les rhw > 2,5× rhw typique -> HUD (compteur « near-camera cards »).
+  - Minicarte : région {.009,.760,.182,1.0} (mesurée sur la capture VR ; l'écran PC est étiré et ne donne pas les bonnes proportions ; cible HUD 1024x768).
+  - Hôte : recentrage automatique une fois, 5 s après la première image avec donjon (worldDraws>0).
+
 
 - **RÈGLE SOURCES** : chaque livraison dépose aussi Livraison\DK2VR_V<version>_Sources.zip (les sources de l'espace de travail sont perdues entre conversations).
 - **Reste à faire (UI)** : pointage sur la table (rayon -> coordonnées écran du jeu), écran options -> panneau F3 auto (détection de l'état options non identifiée), main du gardien 3D (verte, griffes, gaucher), options du mod sur les murs, overlays créatures en billboard (identifier ces draws).

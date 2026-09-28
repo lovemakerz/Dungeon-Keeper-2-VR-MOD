@@ -283,7 +283,7 @@ struct Host {
     int panelPosition=1;float panelDistance=2.2f,panelHeight=.35f,panelWidth=1.8f;
     bool useControllers=true;
     // 0.6.0 HUD and pointer (DK2VR.ini: Hud, LeftHanded, MinimapMode, HudBottomPlace, HudWallWidth...)
-    bool hud=true,leftHanded=false,pickOff=false;int minimapMode=0,bottomPlace=0;
+    bool hud=true,leftHanded=false,pickOff=false;uint64_t worldSeenTick=0;bool autoRecentered=false;int minimapMode=0,bottomPlace=0;
     float hudWallWidth=1.4f,hudBottomWidth=.55f,hudMinimapWidth=.13f;
     HudQuad hudQuads[5];bool trigLatched=false,secondLatched=false,trigBefore=false,secondBefore=false;
     int pointerTarget=-1;uint64_t pointerClicks=0;
@@ -580,6 +580,7 @@ struct Host {
             }
             desktop.create(session,device.Get(),colorFormat,in.desktopWidth,in.desktopHeight);
             for(int e=0;e<2;++e) blitter.copy(context.Get(),eyes[e],sharedViews[chosen][e].Get());
+            if(in.worldDraws>0&&!worldSeenTick) worldSeenTick=GetTickCount64(); // 0.6.9.7: first dungeon image (auto recenter 5 s later)
             if(panel||in.worldDraws==0||request.mode==3) blitter.copy(context.Get(),desktop,sharedViews[chosen][2].Get());
             context->End(gpuFence.Get());context->Flush();
             HRESULT hr=S_FALSE;uint64_t deadline=GetTickCount64()+1000;
@@ -637,6 +638,8 @@ struct Host {
             }
             controllers.update(session,space,fsr.predictedDisplayTime,sessionState==XR_SESSION_STATE_FOCUSED);
             bool recenter=key(VK_F8)||controllers.recenterPressed();
+            // 0.6.9.7: automatic recenter 5 s after the dungeon first appears (player settled with the headset on).
+            if(!autoRecentered&&worldSeenTick&&GetTickCount64()-worldSeenTick>5000) {autoRecentered=true;recenter=true;log("Recentrage automatique (5 s apres l'apparition du donjon)");}
             if(valid) {
                 for(int e=0;e<2;++e) request.eyes[e]={dk2vrPose(views[e].pose),fov(views[e].fov)};
                 if(!centered||recenter) {
@@ -752,7 +755,7 @@ struct Host {
 int wmain(int argc,wchar_t** argv) {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);fs::path root=fs::path(module).parent_path();
     logfile=_wfsopen((root/L"DK2VR-host.log").c_str(),L"w",_SH_DENYNO);
-    log("Dungeon Keeper II VR 0.6.9.6 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
+    log("Dungeon Keeper II VR 0.6.9.7 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
     bool probe=false,noLaunch=false;fs::path game=root/L"Game"/L"DKII-DX.exe";std::wstring arguments=L"-NOMOVIES";
     for(int i=1;i<argc;++i) {
         std::wstring a=argv[i];
