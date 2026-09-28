@@ -227,6 +227,7 @@ struct Package {
     int pedestalSide=0;bool buttonHover=false;         // 0.6.8: minimap pedestal side (0 auto, 1 left, 2 right), laser on its button
     uint32_t screen=0;                              // 0.6.9: wall screen texture (only what lies between the bars)
     bool screenShown=false;                         // 0.6.7.1: wall screen (options / menus) visible
+    bool screenWhole=true;                          // 0.6.9.8: options (whole area, HUD texture) vs messages (screen texture)
     float pickDistance=0;                           // 0.6.7: laser distance to the dungeon geometry (0: none)
     Pose table{};float tableWidth=1;              // table pose/width of the request used by this game frame
     bool panning=false;int panHand=0;Vec3 panFrom{}; // hand position whose native pan produced this frame
@@ -735,7 +736,7 @@ struct VrThread {
         std::vector<HudVertex> sv;
         for(int i=0;i<HudCount;++i) {
             const HudPanel& q=hud.panel[i];if(!q.shown) continue;
-            quad(v,q.pose,q.w,q.h,q.x0/W,q.y0/H,q.x1/W,q.y1/H); // 0.6.9.3: options panel from the full interface texture
+            quad((i==HudScreen&&!p.screenWhole)?sv:v,q.pose,q.w,q.h,q.x0/W,q.y0/H,q.x1/W,q.y1/H); // 0.6.9.3: options from the full interface texture; 0.6.9.8: messages from the screen texture
         }
         d->SetTransform(D3DTS_WORLD,&eyeWorld);d->SetPixelShader(nullptr);d->SetVertexShader(nullptr);
         d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1);
@@ -887,7 +888,7 @@ struct VrThread {
         const float depthRatio=p.tableWidth>0?p.tableDepth/p.tableWidth:.75f;
         // 0.6.1: HUD modules (layout shared with the game thread), laser length from this frame's hit.
         HudLayout hud;const bool hudOn=p.hud&&texture(p.hud)&&p.hudWidth>=64;
-        if(hudOn) hud=layoutHud(r,p.hudSizes,tableAspect>0?tableAspect:depthRatio,p.hudTop,float(p.hudWidth),float(p.hudHeight),p.screenShown,p.pedestalSide);
+        if(hudOn) hud=layoutHud(r,p.hudSizes,tableAspect>0?tableAspect:depthRatio,p.hudTop,float(p.hudWidth),float(p.hudHeight),p.screenShown,p.pedestalSide,p.screenWhole);
         Request rr=r;
         bool buttonLaser=false;
         if(r.pointerFlags&PointerAimValid) {

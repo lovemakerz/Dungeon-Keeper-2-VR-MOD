@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.7 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.8 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -63,6 +63,13 @@
   - Cartes 3D : draw ≤8 sommets dont tous les rhw > 2,5× rhw typique -> HUD (compteur « near-camera cards »).
   - Minicarte : région {.009,.760,.182,1.0} (mesurée sur la capture VR ; l'écran PC est étiré et ne donne pas les bonnes proportions ; cible HUD 1024x768).
   - Hôte : recentrage automatique une fois, 5 s après la première image avec donjon (worldDraws>0).
+- **0.6.9.8** (base 0.6.9.7, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.7 (rapport DK2VR_Rapport_20260928_104419.zip) : crash reproduit ; recentrage auto OK mais voulu dès le lancement ; notifications à valider (boîte « Vos portails… » X/✓) et page objectifs (bouton i) pas visibles correctement ; fluidité insuffisante en déplaçant le donjon malgré 90 i/s casque ; demande : menu principal sur un mur de la salle, en stéréo avec profondeur.
+  - CRASH ÉLUCIDÉ (vérifié) : « GAME EXIT: ExitProcess(-1) » appelé depuis 0x57CFC4 = allocateur de rendu du jeu (0x57CD30 ; agrandissement 0x57CF47..0x57D07F) : réserve de 32 blocs de 2 Mo (en-têtes 0x765B18[32], pointeurs bruts 0x765DA0[32], compteur 0x765B08, limite `cmp edx,0x20` en 0x57CFB4) ; le 33e bloc -> exit(-1). Vue table dézoomée + détail élevé = plus à dessiner. Correctif PoolGrow : les 2 tableaux déplacés vers des tableaux de 129 entrées du plugin (21 références, seules occurrences dans tout l'exe, vérifiées octet à octet ; contenu copié avant), limite 0x7F (127 blocs = 254 Mo). Journal : « Render memory: pool limit 32 -> 127 … », et « render memory N x 2 MB » toutes les 5 s. NB : l'original écrit 0x765DA0[edx] AVANT le test de limite (débordement d'un dword, sans effet ici).
+  - Messages : pause (PauseWatch) -> panneau entier (options) ; sinon, si un draw entre les barres ≥5 %×2,5 % loin du curseur (notification, objectifs) -> panneau « messages » AU-DESSUS de la barre des stats (région milieu, texture screen filtrée : les draws près du curseur sont exclus quand le laser est sur la table), maintien 20 images. layoutHud(…, whole) ; Package::screenWhole.
+  - Recentrage auto : 5 s après la première pose valide du casque (lancement), plus après l'apparition du donjon.
+  - Fluidité (diagnostic, pas corrigé) : jeu 25–30 i/s avec le donjon (33k sommets, 600–900 draws) ; profil : ~80 % du fil de rendu du jeu en attente ntdll ; sites de retour 0x48830D (appel virtuel [edx+0x344], 33 %), 0x70D3C0 (28 %), 0x57CEC7 (allocateur, 8 %). Prochaine étape : identifier l'attente (pilote/verrou) avant toute modification.
+  - À FAIRE (demande utilisateur) : menu principal = niveau 3D natif du frontend ; le rejouer en stéréo (même dé-projection que le donjon) derrière une « fenêtre » dans un mur de la salle.
+
 
 
 - **RÈGLE SOURCES** : chaque livraison dépose aussi Livraison\DK2VR_V<version>_Sources.zip (les sources de l'espace de travail sont perdues entre conversations).

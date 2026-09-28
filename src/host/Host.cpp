@@ -580,7 +580,6 @@ struct Host {
             }
             desktop.create(session,device.Get(),colorFormat,in.desktopWidth,in.desktopHeight);
             for(int e=0;e<2;++e) blitter.copy(context.Get(),eyes[e],sharedViews[chosen][e].Get());
-            if(in.worldDraws>0&&!worldSeenTick) worldSeenTick=GetTickCount64(); // 0.6.9.7: first dungeon image (auto recenter 5 s later)
             if(panel||in.worldDraws==0||request.mode==3) blitter.copy(context.Get(),desktop,sharedViews[chosen][2].Get());
             context->End(gpuFence.Get());context->Flush();
             HRESULT hr=S_FALSE;uint64_t deadline=GetTickCount64()+1000;
@@ -638,8 +637,10 @@ struct Host {
             }
             controllers.update(session,space,fsr.predictedDisplayTime,sessionState==XR_SESSION_STATE_FOCUSED);
             bool recenter=key(VK_F8)||controllers.recenterPressed();
-            // 0.6.9.7: automatic recenter 5 s after the dungeon first appears (player settled with the headset on).
-            if(!autoRecentered&&worldSeenTick&&GetTickCount64()-worldSeenTick>5000) {autoRecentered=true;recenter=true;log("Recentrage automatique (5 s apres l'apparition du donjon)");}
+            // 0.6.9.8: automatic recenter 5 s after the launch (first valid headset pose), before the main menu
+            // (0.6.9.7 waited for the dungeon: too late, the player asked for it at the start).
+            if(valid&&!worldSeenTick) worldSeenTick=GetTickCount64();
+            if(!autoRecentered&&worldSeenTick&&GetTickCount64()-worldSeenTick>5000) {autoRecentered=true;recenter=true;log("Recentrage automatique (5 s apres le lancement)");}
             if(valid) {
                 for(int e=0;e<2;++e) request.eyes[e]={dk2vrPose(views[e].pose),fov(views[e].fov)};
                 if(!centered||recenter) {
@@ -755,7 +756,7 @@ struct Host {
 int wmain(int argc,wchar_t** argv) {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);fs::path root=fs::path(module).parent_path();
     logfile=_wfsopen((root/L"DK2VR-host.log").c_str(),L"w",_SH_DENYNO);
-    log("Dungeon Keeper II VR 0.6.9.7 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
+    log("Dungeon Keeper II VR 0.6.9.8 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
     bool probe=false,noLaunch=false;fs::path game=root/L"Game"/L"DKII-DX.exe";std::wstring arguments=L"-NOMOVIES";
     for(int i=1;i<argc;++i) {
         std::wstring a=argv[i];

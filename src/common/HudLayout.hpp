@@ -48,13 +48,15 @@ inline Quat hudFacing(Vec3 from,Vec3 to,float tiltDegrees) {
 }
 // dungeonTop: height of the dungeon walls above the table (metres); depthRatio: table depth/width.
 // pedestalSide: 0 = beside the pointing hand's opposite side (handedness), 1 = left, 2 = right of the table.
-inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,float dungeonTop,float W,float H,bool screen=false,int pedestalSide=0) {
+// 0.6.9.8: whole = options screen (game paused: game area + statistics bar from the full interface texture);
+// otherwise screen = game messages / objectives (middle region only, from the filtered screen texture).
+inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,float dungeonTop,float W,float H,bool screen=false,int pedestalSide=0,bool whole=true) {
     HudLayout L;
     if(W<64||H<64) return L;
     auto set=[&](int i,const Pose& p,float width){
-        HudPanel& q=L.panel[i];hudPixels(i,W,H,q.x0,q.y0,q.x1,q.y1,screen);
+        HudPanel& q=L.panel[i];hudPixels(i,W,H,q.x0,q.y0,q.x1,q.y1,screen&&whole);
         q.pose=p;q.w=width;q.h=width*(q.y1-q.y0)/std::max(1.f,q.x1-q.x0);q.shown=true;};
-    auto height=[&](int i,float width){float x0,y0,x1,y1;hudPixels(i,W,H,x0,y0,x1,y1,screen);return width*(y1-y0)/std::max(1.f,x1-x0);};
+    auto height=[&](int i,float width){float x0,y0,x1,y1;hudPixels(i,W,H,x0,y0,x1,y1,screen&&whole);return width*(y1-y0)/std::max(1.f,x1-x0);};
     const bool floorKnown=r.handFlags&RequestFloorKnown;
     const float floorY=floorKnown?r.floorY:r.table.position.y-.78f;
     const Vec3 head=scale(add(r.eyes[0].pose.position,r.eyes[1].pose.position),.5f);
@@ -76,9 +78,11 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
         set(HudBottom,bottom,w);
         float y=hb*.5f+gap;
         // 0.6.9.3: options open -> one whole panel (options + statistics bar), no separate statistics panel.
-        if(screen) {const float hsc=height(HudScreen,w);
+        if(screen&&whole) {const float hsc=height(HudScreen,w);
             set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+hsc*.5f,0}}),w);y+=hsc;}
-        else {set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y+hs*.5f,0}}),w);y+=hs;}
+        else {set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y+hs*.5f,0}}),w);y+=hs;
+            if(screen) {const float hsc=height(HudScreen,w); // messages: above the statistics bar
+                set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+gap+hsc*.5f,0}}),w);y+=gap+hsc;}}
         set(HudTop,compose(bottom,Pose{{0,0,0,1},{0,y+gap+ht*.5f,0}}),w);};
     if(r.pointerFlags&HudBottomNear) {
         const float w=std::min(s.bottom,.45f)*1.15f,h=height(HudBottom,w),tilt=-60.f;
