@@ -808,10 +808,10 @@ struct VrThread {
                 // 0.6.7: window R to the left, 2.5R to the right (tooltips next to the cursor were cut).
                 // 0.6.7.1: same scale reduction as the hand (grabbing hand 118 px -> 67 px), window R left / 2.5R right,
                 // R up / 2.2R down (the creature hangs below the hand and was cut).
-                const float R=p.heldRadius,W=float(p.hudWidth),H=float(p.hudHeight),m2=mpp*.35f,sL=R*m2,sR=2.5f*R*m2,sU=R*m2,sD=3.2f*R*m2; // 0.6.9.13: 2.2 -> 3.2 below (held creature cut at the bottom)
+                const float R=p.heldRadius,W=float(p.hudWidth),H=float(p.hudHeight),m2=mpp*.35f,sL=1.5f*R*m2,sR=2.5f*R*m2,sU=R*m2,sD=4.2f*R*m2; // 0.6.9.13: 2.2 -> 3.2 below; 0.6.9.14: 4.2 below, 1.5 left (still cut)
                 Vec3 c0=add(sub(hot,scale(right,sL)),scale(up,sU));
                 Vec3 a2=c0,b2=add(c0,scale(right,sL+sR)),cc2=sub(b2,scale(up,sU+sD)),d2=sub(c0,scale(up,sU+sD));
-                float u0=(p.heldPx-R)/W,v0=(p.heldPy-R)/H,u1=(p.heldPx+2.5f*R)/W,v1=(p.heldPy+3.2f*R)/H;
+                float u0=(p.heldPx-1.5f*R)/W,v0=(p.heldPy-R)/H,u1=(p.heldPx+2.5f*R)/W,v1=(p.heldPy+4.2f*R)/H;
                 HudVertex hq[6]={{a2,0xffffffff,u0,v0},{b2,0xffffffff,u1,v0},{cc2,0xffffffff,u1,v1},{a2,0xffffffff,u0,v0},{cc2,0xffffffff,u1,v1},{d2,0xffffffff,u0,v1}};
                 d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);d->SetRenderState(D3DRS_ALPHAREF,4);
                 d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_BORDER);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_BORDER);d->SetSamplerState(0,D3DSAMP_BORDERCOLOR,0);

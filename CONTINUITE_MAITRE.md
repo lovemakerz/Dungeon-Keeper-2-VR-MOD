@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.13 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.14 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -87,6 +87,11 @@
   - (2) Ces pièces 3D chevauchent deux régions (barre stats / panneau du bas) : inBar exige maintenant que chaque COIN soit dans une des 4 régions de barre (±0,01), au lieu du rectangle entier dans une seule.
   - (1) inBox ne dépend plus du curseur : tout ce qui est dans la boîte de l'image précédente va au panneau messages, sauf ce qui est dessiné près du curseur APRÈS le modèle tenu (heldModelSeen : draw à z variable près du curseur ; compteur d'objets tenus).
   - (3) Fenêtre de la main : 3,2 R vers le bas au lieu de 2,2 R (Decoupled.inl, quad + UV).
+- **0.6.9.14** (base 0.6.9.13, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.13 (rapport DK2VR_Rapport_20260928_170600.zip) : « 0 » et portrait des compteurs toujours invisibles (absents de la texture HUD elle-même, vérifié sur la capture « écran ») ; notification sur la main « toujours pas bon » (non visible sur les captures) ; créature tenue encore un peu coupée ; le bouton de repli a encore replié le panneau (capture 5).
+  - CAUSE PROBABLE commune (déduite) : uiReplay utilisait le tampon de profondeur DU JEU (profondeur du donjon) -> les pièces d'interface placées en profondeur (« 0 », portrait) échouaient au test là où le donjon est plus proche ; au survol, le jeu les rapproche -> visibles. Correctif : tampon de profondeur PROPRE à l'interface (D24S8, taille de la cible, vidé à 1,0 à chaque image avec la cible ; ZFUNC natif = 4 LESSEQUAL vérifié dans le journal), restauré après chaque draw (DepthBack). Les pièces se trient toujours entre elles (leçon 0.6.9.9 respectée).
+  - Bouton de repli : rectangle mesuré sur la texture HUD (capture écran) : flèches x .397–.429, y .766–.824 -> blocage x .390–.436, y .755–.832, sur panneau bas OU barre stats.
+  - Fenêtre de la main : 1,5 R à gauche, 4,2 R en bas.
+
 
 
 
