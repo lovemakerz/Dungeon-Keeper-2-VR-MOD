@@ -20,3 +20,5 @@ DK2VR_Rapport_*.zip
 .DS_Store
 Thumbs.db
 out/*Tests
+out/*.def
+out/*.a
