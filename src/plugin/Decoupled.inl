@@ -631,20 +631,18 @@ struct VrThread {
             auto compile=dc?reinterpret_cast<Compile>(GetProcAddress(dc,"D3DCompile")):nullptr;
             // 0.7.8: fixed cut-out of the game's bars (rectangles measured on a clean capture, fractions of the 1024x768
             // game area): outside them everything is transparent whatever the game image holds (dungeon specks).
-            const char* src="sampler f:register(s0);float4 r[7]:register(c0);"
+            const char* src="sampler f:register(s0);float4 r[8]:register(c0);"
                 "float inside(float4 q,float2 uv){float2 a=step(q.xy,uv)*step(uv,q.zw);return a.x*a.y;}"
                 "float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float m=0;"
-                "for(int i=0;i<7;i++) m=max(m,inside(r[i],uv));"
-                "float l=max(c.r,max(c.g,c.b));float a=saturate((l-0.025)*25.0)*m;return float4(c.rgb*a,a);}";
+                "for(int i=0;i<8;i++) m=max(m,inside(r[i],uv));"
+                "float l=max(c.r,max(c.g,c.b));float a=saturate((l-0.008)*60.0)*m;return float4(c.rgb*a,a);}"; // 0.7.10: only pure black is transparent (dark button interiors stay)
             ComPtr<ID3DBlob> code,err;
-            // 0.7.9: minimap cut-out = medallion (ellipse) + the four corner buttons; the rest is transparent.
-            {const char* msrc="sampler f:register(s0);float4 k[4]:register(c0);float4 e:register(c4);"
-                "float inside(float4 q,float2 uv){float2 a=step(q.xy,uv)*step(uv,q.zw);return a.x*a.y;}"
-                "float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float2 d=(uv-e.xy)/e.zw;float ell=step(dot(d,d),1.0);"
-                "float m=0;for(int i=0;i<4;i++) m=max(m,inside(k[i],uv));"
-                "float l=max(c.r,max(c.g,c.b));float key=saturate((l-0.025)*25.0);float a=max(ell,m*key);return float4(c.rgb*a,a);}";
+            // 0.7.10: minimap = its exact frame (dark metal square, measured x 8-186, y 585-760 of 1024x768), opaque:
+            // everything outside the rectangle is transparent (the game image may hold dungeon specks there).
+            {const char* msrc="sampler f:register(s0);float4 k:register(c0);"
+                "float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float2 a=step(k.xy,uv)*step(uv,k.zw);float m=a.x*a.y;return float4(c.rgb*m,m);}";
              ComPtr<ID3DBlob> mc,me;
-             if(compile&&SUCCEEDED(compile(msrc,strlen(msrc),nullptr,nullptr,nullptr,"main","ps_2_a",0,0,&mc,&me))) dev->CreatePixelShader(static_cast<const DWORD*>(mc->GetBufferPointer()),&mapShader);}
+             if(compile&&SUCCEEDED(compile(msrc,strlen(msrc),nullptr,nullptr,nullptr,"main","ps_2_0",0,0,&mc,&me))) dev->CreatePixelShader(static_cast<const DWORD*>(mc->GetBufferPointer()),&mapShader);}
             if(compile&&SUCCEEDED(compile(src,strlen(src),nullptr,nullptr,nullptr,"main","ps_2_a",0,0,&code,&err))&&SUCCEEDED(dev->CreatePixelShader(static_cast<const DWORD*>(code->GetBufferPointer()),&barShader)))
                 log("VR thread: bars drawn from the game image (HudFromGameImage=1)");
             else log("VR thread: bar shader unavailable (d3dcompiler_47 %s), bars from the interface texture",dc?"failed":"missing");
@@ -804,18 +802,18 @@ struct VrThread {
         if(!fv.empty()) {
             // Black of the game image (no dungeon behind the bars: engine view kept between the bars) = transparent.
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
-            {static const float cut[7][4]={{0.f,0.f,1.f,.068f},{0.f,0.f,.40f,.092f},{.015f,.690f,.740f,.762f},
+            {static const float cut[8][4]={{.440f,.752f,.560f,.834f},{0.f,0.f,1.f,.068f},{0.f,0.f,.40f,.092f},{.015f,.690f,.740f,.762f},
                 {.175f,.757f,.435f,.830f},{0.f,.767f,.830f,.823f},{.810f,.757f,1.f,.830f},{0.f,.833f,1.f,1.f}};
-             d->SetPixelShaderConstantF(0,&cut[0][0],7);}
+             d->SetPixelShaderConstantF(0,&cut[0][0],8);}
             d->SetTexture(0,frameTex);d->SetPixelShader(barShader.Get());
             if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(fv.size()/3),fv.data(),sizeof(HudVertex)))) ++sDrawFailures;
             d->SetPixelShader(nullptr);
         }
         if(!mv.empty()) {
             if(mapShader) {
-                static const float mc[5][4]={{.010f,.763f,.056f,.822f},{.135f,.763f,.181f,.822f},{.010f,.908f,.056f,.978f},{.135f,.908f,.181f,.978f},{.094f,.869f,.079f,.106f}};
+                static const float mc[4]={.0078f,.762f,.1816f,.990f};
                 d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
-                d->SetPixelShaderConstantF(0,&mc[0][0],5);d->SetPixelShader(mapShader.Get());d->SetTexture(0,frameTex);
+                d->SetPixelShaderConstantF(0,mc,1);d->SetPixelShader(mapShader.Get());d->SetTexture(0,frameTex);
                 if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(mv.size()/3),mv.data(),sizeof(HudVertex)))) ++sDrawFailures;
                 d->SetPixelShader(nullptr);
             } else {

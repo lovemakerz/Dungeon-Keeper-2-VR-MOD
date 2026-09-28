@@ -16,7 +16,7 @@ enum HudIndex {HudTop=0,HudStats=1,HudMinimap=2,HudBottom=3,HudScreen=4};
 constexpr HudRegion HudRegions[HudCount]={
     {0.f,0.f,1.f,.090f},      // health, gold, message line
     {0.f,.693f,.73f,.760f},   // timer / statistics bar
-    {.009f,.760f,.182f,1.f},  // minimap and its four corner buttons (0.6.9.7: measured on the VR capture: wood piece .000-.007 cut, frame reached .178 -> margin up to the panel start .182)
+    {.0078f,.762f,.1816f,.990f},  // minimap and its four corner buttons (0.6.9.7: measured on the VR capture: wood piece .000-.007 cut, frame reached .178 -> margin up to the panel start .182)
     {.182f,.760f,1.f,1.f},    // creatures / rooms / spells panel
     {0.f,.090f,1.f,.715f}};   // everything in between (down to 'Continue game' of the options screen): options screen, menus, tooltips (front wall)
 // 0.6.9.3: while the options screen is open, its panel shows the whole game area from below the top bar down to
