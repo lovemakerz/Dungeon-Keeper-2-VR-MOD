@@ -8,6 +8,9 @@ if (Test-Path -LiteralPath $captures) {
     # 0.6.9.3 : captures JPG (legeres) -> les 6 plus recentes (3 images chacune). Les anciens PNG sont ignores.
     $files += @(Get-ChildItem -LiteralPath $captures -File -Filter '*.jpg' | Sort-Object LastWriteTime -Descending | Select-Object -First 18 | ForEach-Object { $_.FullName })
 }
+# 0.6.9.4 : l'executable du jeu (copie VR, jamais modifie sur disque) pour l'analyse du choix des textures et du crash.
+$exe = Join-Path $root 'Game\DKII-DX.exe'
+if (Test-Path -LiteralPath $exe) { $files += $exe }
 if ($files.Count -eq 0) { Write-Host 'Aucun journal trouve. Lancez d''abord le jeu avec LANCER_DK2_VR.cmd.'; exit 1 }
 $out = Join-Path $root ('DK2VR_Rapport_' + (Get-Date -Format 'yyyyMMdd_HHmmss') + '.zip')
 Compress-Archive -LiteralPath $files -DestinationPath $out -Force

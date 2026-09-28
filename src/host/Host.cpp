@@ -283,7 +283,7 @@ struct Host {
     int panelPosition=1;float panelDistance=2.2f,panelHeight=.35f,panelWidth=1.8f;
     bool useControllers=true;
     // 0.6.0 HUD and pointer (DK2VR.ini: Hud, LeftHanded, MinimapMode, HudBottomPlace, HudWallWidth...)
-    bool hud=true,leftHanded=false;int minimapMode=0,bottomPlace=0;
+    bool hud=true,leftHanded=false,pickOff=false;int minimapMode=0,bottomPlace=0;
     float hudWallWidth=1.4f,hudBottomWidth=.55f,hudMinimapWidth=.13f;
     HudQuad hudQuads[5];bool trigLatched=false,secondLatched=false,trigBefore=false,secondBefore=false;
     int pointerTarget=-1;uint64_t pointerClicks=0;
@@ -459,7 +459,7 @@ struct Host {
     }
     // Laser from the aim pose of the pointing hand; the nearest module hit becomes the game cursor.
     void pointHud() {
-        request.pointerFlags=(leftHanded?HudLeftHanded:0u)|(bottomPlace==1?HudBottomNear:0u)|(uint32_t(minimapMode)<<HudMinimapShift);
+        request.pointerFlags=(leftHanded?HudLeftHanded:0u)|(bottomPlace==1?HudBottomNear:0u)|(uint32_t(minimapMode)<<HudMinimapShift)|(pickOff?HudPickOff:0u);
         request.rayLength=0;pointerTarget=-1;
         const int h=leftHanded?0:1;
         {   // 0.6.2: thumbstick of the other hand scrolls the map (dead zone 0.15, rescaled).
@@ -610,6 +610,7 @@ struct Host {
             if(key(VK_F3)||key(VK_F6)) {panel=!panel;log("Panneau du jeu (F3) : %s",panel?"affiche":"masque");}
             if(key(VK_F4)) {hud=!hud;log("HUD VR (F4) : %s",hud?"affiche":"masque");}
             if(key(VK_F2)) {minimapMode=(minimapMode+1)%3;log("Minicarte (F2) : %s",minimapMode==0?"piedestal":minimapMode==1?"montre (toujours)":"montre (quand on la regarde)");}
+            if(key(VK_F12)) {pickOff=!pickOff;log("Selection sur toute la table (F12) : %s",pickOff?"desactivee (textures nettes, zone morte au bord)":"activee");}
             if(key(VK_F11)||fs::exists(outputDirectory/L"CAPTURE.request")) {
                 capture=true;std::error_code ec;fs::remove(outputDirectory/L"CAPTURE.request",ec);
             }
@@ -752,7 +753,7 @@ struct Host {
 int wmain(int argc,wchar_t** argv) {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);fs::path root=fs::path(module).parent_path();
     logfile=_wfsopen((root/L"DK2VR-host.log").c_str(),L"w",_SH_DENYNO);
-    log("Dungeon Keeper II VR 0.6.9.3.1 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
+    log("Dungeon Keeper II VR 0.6.9.4 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
     bool probe=false,noLaunch=false;fs::path game=root/L"Game"/L"DKII-DX.exe";std::wstring arguments=L"-NOMOVIES";
     for(int i=1;i<argc;++i) {
         std::wstring a=argv[i];
