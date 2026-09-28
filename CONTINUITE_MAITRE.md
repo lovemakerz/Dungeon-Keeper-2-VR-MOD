@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.8 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.9 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -69,6 +69,11 @@
   - Recentrage auto : 5 s après la première pose valide du casque (lancement), plus après l'apparition du donjon.
   - Fluidité (diagnostic, pas corrigé) : jeu 25–30 i/s avec le donjon (33k sommets, 600–900 draws) ; profil : ~80 % du fil de rendu du jeu en attente ntdll ; sites de retour 0x48830D (appel virtuel [edx+0x344], 33 %), 0x70D3C0 (28 %), 0x57CEC7 (allocateur, 8 %). Prochaine étape : identifier l'attente (pilote/verrou) avant toute modification.
   - À FAIRE (demande utilisateur) : menu principal = niveau 3D natif du frontend ; le rejouer en stéréo (même dé-projection que le donjon) derrière une « fenêtre » dans un mur de la salle.
+- **0.6.9.9** (base 0.6.9.8, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.8 (rapport DK2VR_Rapport_20260928_125219.zip) : PLUS DE CRASH (mémoire de rendu max 6 blocs dans ce test) ; recentrage auto au lancement VALIDÉ (« Parfait ») ; notification : mal placée (voulue au-dessus de TOUTES les barres ; options à laisser où elles sont — l'écran options déborde sur la barre du temps même sur le PC, résolution) et disparaît quand on la pointe ; notification visible sur la main du gardien ; un élément d'UI sous le laser disparaît encore.
+  - Élément qui disparaît : les portraits/cartes que le jeu anime en 3D au survol sont rejoués dans la cible HUD (uiReplay) avec le test de profondeur du jeu (tampon de profondeur du donjon) -> masqués. uiReplay coupe désormais ZENABLE/ZWRITEENABLE (restaurés après).
+  - Messages : draw unique ≥8 %×4 % ou union ≥30 %×10 % entre les barres ; les draws au curseur comptent quand le panneau est affiché et que le laser n'est pas sur la table (pointage de la boîte). Panneau messages placé AU-DESSUS de la barre de vie (layoutHud stack) ; options inchangées (whole, sous la barre de vie).
+  - Main du gardien : les boîtes de message (draws ≥8 %×4 %) sont effacées de la fenêtre « objet tenu ».
+
 
 
 

@@ -756,7 +756,7 @@ struct Host {
 int wmain(int argc,wchar_t** argv) {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);fs::path root=fs::path(module).parent_path();
     logfile=_wfsopen((root/L"DK2VR-host.log").c_str(),L"w",_SH_DENYNO);
-    log("Dungeon Keeper II VR 0.6.9.8 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
+    log("Dungeon Keeper II VR 0.6.9.9 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
     bool probe=false,noLaunch=false;fs::path game=root/L"Game"/L"DKII-DX.exe";std::wstring arguments=L"-NOMOVIES";
     for(int i=1;i<argc;++i) {
         std::wstring a=argv[i];

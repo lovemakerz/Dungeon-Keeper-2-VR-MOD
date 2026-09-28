@@ -80,10 +80,10 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
         // 0.6.9.3: options open -> one whole panel (options + statistics bar), no separate statistics panel.
         if(screen&&whole) {const float hsc=height(HudScreen,w);
             set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+hsc*.5f,0}}),w);y+=hsc;}
-        else {set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y+hs*.5f,0}}),w);y+=hs;
-            if(screen) {const float hsc=height(HudScreen,w); // messages: above the statistics bar
-                set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+gap+hsc*.5f,0}}),w);y+=gap+hsc;}}
-        set(HudTop,compose(bottom,Pose{{0,0,0,1},{0,y+gap+ht*.5f,0}}),w);};
+        else {set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y+hs*.5f,0}}),w);y+=hs;}
+        set(HudTop,compose(bottom,Pose{{0,0,0,1},{0,y+gap+ht*.5f,0}}),w);y+=gap+ht;
+        // 0.6.9.9: game messages / objectives ABOVE every bar (health bar included); the options screen keeps its place.
+        if(screen&&!whole) {const float hsc=height(HudScreen,w);set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+gap+hsc*.5f,0}}),w);}};
     if(r.pointerFlags&HudBottomNear) {
         const float w=std::min(s.bottom,.45f)*1.15f,h=height(HudBottom,w),tilt=-60.f;
         stack(compose(side,Pose{pitch(tilt*Pi/180.f),{0,.02f+h*.5f*std::cos(tilt*Pi/180.f),along+.10f}}),w);
