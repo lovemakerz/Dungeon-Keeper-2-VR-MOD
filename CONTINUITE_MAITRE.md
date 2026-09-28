@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.7 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.9 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -122,6 +122,8 @@
 - **0.7.5** (base 0.7.4) — rapport DK2VR_Rapport_20260928_222910.zip : facteur x0,25, « table between the bars 1 » (0.7.4 a corrigé le gros du problème : barres propres). Restent de minuscules taches orange (bas de l'image du jeu y≈.97-1.0 et bande marron y≈.755) = petits triangles de donjon classés interface (règle « petit + dans une barre »). Correctif : les pièces 3D d'interface doivent être entièrement dans y ∈ [.68 ; .975].
 - **0.7.6** (base 0.7.5) — rapport DK2VR_Rapport_20260928_223731.zip (sans commentaire) : barres PROPRES (capture 1, donjon plus visible sous les barres). Défaut vu : texte de la page des objectifs sur la table près de la main (fenêtre de la main copiée depuis la texture d'interface). Correctif : pas de fenêtre de main pendant la page des objectifs (message sans boîte).
 - **0.7.7** (base 0.7.6) — capture annotée de l'utilisateur sur la 0.7.5 : bandes de roche orange du donjon visibles entre la bande marron et les onglets/portraits (y≈.77-.80), plates et larges. Correctif : pièce 3D d'interface seulement si largeur ≤ .10, hauteur ≤ .20, hauteur ≥ 0,6×largeur, y ∈ [.68 ; .975] (boutons/portraits carrés ou hauts).
+- **0.7.8** (base 0.7.7) — retour 0.7.7 : « toujours pareil » ; idée de l'utilisateur : masque fixe (cut-out) plutôt que trier les dessins. MASQUE : 7 rectangles (fractions de 1024x768, mesurés sur la capture propre DK2VR_20260928_223535_001_ecran.jpg) passés en constantes au shader des barres (ps_2_a) : bandeau du haut y<.068 ; santé/or x<.40,y<.092 ; barre stats x .015–.74, y .69–.762 ; onglets x .175–.435, y .757–.83 ; bande marron x<.83, y .767–.823 ; bloc gris x>.81, y .757–.83 ; panneau bas y>.833. Hors rectangles = transparent quelle que soit l'image du jeu. Un masque tiré des captures (union) a été essayé et abandonné (taches orange des versions précédentes le polluaient). À vérifier : infobulles au-dessus des barres (hors masque -> masquées).
+- **0.7.9** — même défaut sur la minicarte (donjon dans ses coins, mal découpée). Masque minicarte : ellipse du médaillon (centre .094,.869 ; rayons .079,.106) opaque + 4 rectangles de boutons de coin (avec clé de noir), le reste transparent ; shader mapShader (ps_2_a). Rectangles estimés sur la capture propre : à ajuster selon le retour.
 
 
 

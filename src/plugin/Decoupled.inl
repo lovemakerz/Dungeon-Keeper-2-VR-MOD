@@ -591,7 +591,7 @@ struct VrThread {
     // the game's LOD bias is replaced by VrLodBias. Diagnostics: filters and texture sizes seen.
     int anisotropy=16;float lodBias=0;bool keepBias=false;
     std::map<uint32_t,uint64_t> filterSeen;std::map<UINT,uint64_t> sizeSeen;int sharpReports=0;
-    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader;bool hudBacking=true;
+    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader,mapShader;bool hudBacking=true;
     uint32_t cacheEpoch=0;uint64_t frames=0;
     struct Images {ComPtr<IDirect3DTexture9> color[3];ComPtr<IDirect3DSurface9> target[3],depth;HANDLE handles[3]{};UINT w=0,h=0,dw=0,dh=0;uint32_t generation=0;};
     Images images[SlotCount];ComPtr<IDirect3DQuery9> query;
@@ -629,9 +629,23 @@ struct VrThread {
             using Compile=HRESULT(WINAPI*)(LPCVOID,SIZE_T,LPCSTR,const D3D_SHADER_MACRO*,ID3DInclude*,LPCSTR,LPCSTR,UINT,UINT,ID3DBlob**,ID3DBlob**);
             HMODULE dc=LoadLibraryW(L"d3dcompiler_47.dll");
             auto compile=dc?reinterpret_cast<Compile>(GetProcAddress(dc,"D3DCompile")):nullptr;
-            const char* src="sampler f:register(s0);float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float l=max(c.r,max(c.g,c.b));float a=saturate((l-0.025)*25.0);return float4(c.rgb*a,a);}";
+            // 0.7.8: fixed cut-out of the game's bars (rectangles measured on a clean capture, fractions of the 1024x768
+            // game area): outside them everything is transparent whatever the game image holds (dungeon specks).
+            const char* src="sampler f:register(s0);float4 r[7]:register(c0);"
+                "float inside(float4 q,float2 uv){float2 a=step(q.xy,uv)*step(uv,q.zw);return a.x*a.y;}"
+                "float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float m=0;"
+                "for(int i=0;i<7;i++) m=max(m,inside(r[i],uv));"
+                "float l=max(c.r,max(c.g,c.b));float a=saturate((l-0.025)*25.0)*m;return float4(c.rgb*a,a);}";
             ComPtr<ID3DBlob> code,err;
-            if(compile&&SUCCEEDED(compile(src,strlen(src),nullptr,nullptr,nullptr,"main","ps_2_0",0,0,&code,&err))&&SUCCEEDED(dev->CreatePixelShader(static_cast<const DWORD*>(code->GetBufferPointer()),&barShader)))
+            // 0.7.9: minimap cut-out = medallion (ellipse) + the four corner buttons; the rest is transparent.
+            {const char* msrc="sampler f:register(s0);float4 k[4]:register(c0);float4 e:register(c4);"
+                "float inside(float4 q,float2 uv){float2 a=step(q.xy,uv)*step(uv,q.zw);return a.x*a.y;}"
+                "float4 main(float2 uv:TEXCOORD0):COLOR{float4 c=tex2D(f,uv);float2 d=(uv-e.xy)/e.zw;float ell=step(dot(d,d),1.0);"
+                "float m=0;for(int i=0;i<4;i++) m=max(m,inside(k[i],uv));"
+                "float l=max(c.r,max(c.g,c.b));float key=saturate((l-0.025)*25.0);float a=max(ell,m*key);return float4(c.rgb*a,a);}";
+             ComPtr<ID3DBlob> mc,me;
+             if(compile&&SUCCEEDED(compile(msrc,strlen(msrc),nullptr,nullptr,nullptr,"main","ps_2_a",0,0,&mc,&me))) dev->CreatePixelShader(static_cast<const DWORD*>(mc->GetBufferPointer()),&mapShader);}
+            if(compile&&SUCCEEDED(compile(src,strlen(src),nullptr,nullptr,nullptr,"main","ps_2_a",0,0,&code,&err))&&SUCCEEDED(dev->CreatePixelShader(static_cast<const DWORD*>(code->GetBufferPointer()),&barShader)))
                 log("VR thread: bars drawn from the game image (HudFromGameImage=1)");
             else log("VR thread: bar shader unavailable (d3dcompiler_47 %s), bars from the interface texture",dc?"failed":"missing");
         }
@@ -790,17 +804,28 @@ struct VrThread {
         if(!fv.empty()) {
             // Black of the game image (no dungeon behind the bars: engine view kept between the bars) = transparent.
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
+            {static const float cut[7][4]={{0.f,0.f,1.f,.068f},{0.f,0.f,.40f,.092f},{.015f,.690f,.740f,.762f},
+                {.175f,.757f,.435f,.830f},{0.f,.767f,.830f,.823f},{.810f,.757f,1.f,.830f},{0.f,.833f,1.f,1.f}};
+             d->SetPixelShaderConstantF(0,&cut[0][0],7);}
             d->SetTexture(0,frameTex);d->SetPixelShader(barShader.Get());
             if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(fv.size()/3),fv.data(),sizeof(HudVertex)))) ++sDrawFailures;
             d->SetPixelShader(nullptr);
         }
         if(!mv.empty()) {
+            if(mapShader) {
+                static const float mc[5][4]={{.010f,.763f,.056f,.822f},{.135f,.763f,.181f,.822f},{.010f,.908f,.056f,.978f},{.135f,.908f,.181f,.978f},{.094f,.869f,.079f,.106f}};
+                d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
+                d->SetPixelShaderConstantF(0,&mc[0][0],5);d->SetPixelShader(mapShader.Get());d->SetTexture(0,frameTex);
+                if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(mv.size()/3),mv.data(),sizeof(HudVertex)))) ++sDrawFailures;
+                d->SetPixelShader(nullptr);
+            } else {
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ZERO);
             d->SetRenderState(D3DRS_TEXTUREFACTOR,0xffffffff);
             d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TFACTOR);
             d->SetTexture(0,frameTex);
             if(FAILED(d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,UINT(mv.size()/3),mv.data(),sizeof(HudVertex)))) ++sDrawFailures;
             d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
+            }
         }
         if(!sv.empty()&&p.screen&&texture(p.screen)) {
             d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);
