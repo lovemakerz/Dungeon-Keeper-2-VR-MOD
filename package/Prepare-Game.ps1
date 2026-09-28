@@ -1,4 +1,4 @@
-# DK2VR 0.7.4 - prepare (first launch) or update (every launch) the VR copy of the game.
+# DK2VR 0.7.5 - prepare (first launch) or update (every launch) the VR copy of the game.
 param([string]$SourceGame = (Join-Path $PSScriptRoot '..\Dungeon Keeper 2'))
 $ErrorActionPreference = 'Stop'
 $source = [IO.Path]::GetFullPath($SourceGame)
@@ -50,7 +50,7 @@ if (!(Test-Path -LiteralPath $marker)) {
         Copy-Item -Path (Join-Path $saves '*') -Destination (Join-Path $target 'Data\Save') -Recurse -Force
         Write-Host ('Sauvegardes reprises depuis ' + $previous.Name)
     }
-    [ordered]@{Version='0.7.4';Original=$source;ExecutableSHA256=$actual;Created=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
+    [ordered]@{Version='0.7.5';Original=$source;ExecutableSHA256=$actual;Created=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
 }
 foreach ($name in 'ddraw.dll','DK2VR.dll','ddraw.ini') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "payload\$name") -Destination (Join-Path $target $name) -Force

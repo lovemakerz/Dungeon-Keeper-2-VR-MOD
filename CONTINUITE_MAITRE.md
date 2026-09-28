@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.4 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.5 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -119,6 +119,7 @@
   - pickFits = 0 sur toute la session (facteur x0,33) : à examiner (les règles dépendant de pickFits sont inactives).
 - **0.7.3** (base 0.7.2) — seuls les petits draws 3D (≤ .30 × .16) peuvent être classés interface. Rapport DK2VR_Rapport_20260928_215406.zip (2 captures zoom min, 2 zoom max) : sur les agrandissements des captures VR, barres COMPLÈTES aux deux zooms (« 0 », « i », portrait derrière les compteurs présents), aucun morceau de donjon visible ; utilisateur dit en voir encore -> hypothèse : les fonds orange/lave des cases de statistiques sont des textures NATIVES de DK2 (identiques sur l'écran PC). Demande d'une capture annotée avant toute nouvelle modification.
 - **0.7.4** (base 0.7.3, NON TESTÉE) — capture annotée de l'utilisateur : donjon visible dans les interstices sous les onglets et sous le bloc gris à droite (y ≈ 0,76). CAUSE (code + journaux) : facteur de focale plancher 0,30 -> la table déborde sous les barres, pickFits jamais vrai (sonde « fits 0 »), le rectangle moteur n'est jamais borné, des cases du donjon sont dessinées sous les barres et une partie est classée interface (règle ty ≥ 0,76). De plus la zone morte de lissage (0,03) bloquait x0,33. Correctif : plancher TablePickScale 0,20, zone morte 0,01 ; journal « table between the bars 0/1 ».
+- **0.7.5** (base 0.7.4) — rapport DK2VR_Rapport_20260928_222910.zip : facteur x0,25, « table between the bars 1 » (0.7.4 a corrigé le gros du problème : barres propres). Restent de minuscules taches orange (bas de l'image du jeu y≈.97-1.0 et bande marron y≈.755) = petits triangles de donjon classés interface (règle « petit + dans une barre »). Correctif : les pièces 3D d'interface doivent être entièrement dans y ∈ [.68 ; .975].
 
 
 
