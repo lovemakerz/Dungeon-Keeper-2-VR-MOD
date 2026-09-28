@@ -102,7 +102,7 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
         Pose p{hudFacing(center,eye,tilt),center};
         set(HudMinimap,p,w);
         L.pedestal=true;L.pedestalTop=p;L.pedestalFoot={base.x,floorY,base.z};L.plateW=w+.04f;L.plateH=h+.04f;
-        {const Vec3 under=toWorld(p,{0,-L.plateH*.25f,-.03f});
+        {Vec3 under=toWorld(p,{0,-L.plateH*.40f,-.06f});under.y-=.02f; // 0.6.9.6: same column top as buildPedestal
          if(under.y-floorY>.25f) {
              const Quat yaw=yawOnly(p.orientation);const float mid=under.y-.085f; // 0.6.9: top of the column, smaller
              L.button=true;L.buttonW=.06f;L.buttonH=.06f;L.arrowRight=sx<0;

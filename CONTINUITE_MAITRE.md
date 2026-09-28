@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.5 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.6 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -52,6 +52,12 @@
   - Hypothèse (non vérifiée) : le crash « clic de sélection » de 0.6.9.3.1 peut venir d'un rechargement massif de textures lors d'un passage x0,33 -> x1 (sortie de la vue table) ; avec le correctif de détail, les textures restent au même niveau dans les deux cas. Journal CRASH? toujours actif.
   - Piédestal : plaque + bordure remises (buildPedestal comme en 0.6.8).
   - Outils RE (session cloud) : /tmp/re/disasm_all.py (capstone sur toutes les sections exécutables -> pickle), xref.py (recherche d'opérande), ctx.py (contexte). Recréer à partir de l'exe du rapport.
+- **0.6.9.6** (base 0.6.9.5, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.5 (rapport DK2VR_Rapport_20260928_101654.zip) : pas de crash signalé ; options ouvertes OK (capture 4) ; MAIS (1) bande d'UI encore sur la table (zoom avant) ; (2) textures floues : journal « Texture detail: site 5815DA+12 unsupported, detail fix off » -> le correctif N'ÉTAIT PAS ACTIF (espacement +0x12/+0x24 supposé identique partout, faux pour 0x5815DA : +0xF/+0x21) ; (3) pied du piédestal visible à travers le bas de la plaque ; (4) options fermées : barre de vie restée en haut (écran « options » maintenu en permanence : « Wall screen shown in ~160 frames/5 s »).
+  - (2) Table des 21 adresses EXACTES (7 triplets) extraite de l'exe ; vérification octet par octet avant patch.
+  - (4) Cause : 0.6.9.3 comptait tous les draws près du curseur une fois l'écran actif -> curseur + infobulle suffisaient à le maintenir. Désormais, écran actif : seuls les draws dans un petit voisinage du sprite curseur sont ignorés (0,5R..1R) et seuil relâché 30 %x20 % ; activation inchangée (40 %x30 %, exclusion large) ; maintien 30 images.
+  - (1) pickFits exigeait s≥0,98 alors que le lissage laisse 3 % d'écart -> souvent faux. Seuil 0,90 ; en plus, centre ≥0,74 suffit. Diagnostic : « 3D draw reaching the bars kept in the dungeon: y … count … fits … » (30 max).
+  - (3) Haut de colonne sous l'arrière de la plaque (point -0,40 plateH, -6 cm, -2 cm) ; bouton recalé pareil (HudLayout.hpp).
+
 - **RÈGLE SOURCES** : chaque livraison dépose aussi Livraison\DK2VR_V<version>_Sources.zip (les sources de l'espace de travail sont perdues entre conversations).
 - **Reste à faire (UI)** : pointage sur la table (rayon -> coordonnées écran du jeu), écran options -> panneau F3 auto (détection de l'état options non identifiée), main du gardien 3D (verte, griffes, gaucher), options du mod sur les murs, overlays créatures en billboard (identifier ces draws).
 - Perf : rapport 20260927_143944 : uploads textures 13909/5 s au chargement puis 140-600/5 s (SurfHashList2 fill A + éviction) -> plus un problème prioritaire.

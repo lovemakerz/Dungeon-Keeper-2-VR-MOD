@@ -444,7 +444,8 @@ void buildPedestal(const HudLayout& hud,std::vector<OverlayVertex>& mesh,bool ho
     // Rim of darker iron around the plate.
     coloredBox(mesh,t,{-hud.plateW*.5f-.012f,-hud.plateH*.5f-.012f,-.040f},{hud.plateW*.5f+.012f,hud.plateH*.5f+.012f,-.030f},0xff3e2518,0xff2a170e);
     // Column: vertical, from the floor to under the plate.
-    Vec3 under=toWorld(t,{0,-hud.plateH*.25f,-.03f});
+    // 0.6.9.6: column top under the back of the plate (it showed through the plate's lower edge).
+    Vec3 under=toWorld(t,{0,-hud.plateH*.40f,-.06f});under.y-=.02f;
     float bottom=hud.pedestalFoot.y,topY=under.y;
     if(topY-bottom>.05f) {
         Pose col{yawOnly(t.orientation),{under.x,0,under.z}};

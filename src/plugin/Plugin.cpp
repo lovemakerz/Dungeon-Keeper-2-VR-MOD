@@ -1,4 +1,4 @@
-// DK2VR 0.6.9.5 - texture detail follows the focal factor (21 LOD compares redirected); F12 removed; pedestal plate restored. 0.6.9.4 - crash log (exception handler); interface over the bars kept out of the table while the table fits between them; F12 toggles whole-table picking. 0.6.9.3.1 - host linked to openxr_loader.dll (was libopenxr_loader.dll: start failure). 0.6.9.3 - options screen whole (stats bar included) and steady under the laser; pedestal plate removed; adaptive focal factor (sharper textures); 3D interface pieces over the bottom bars kept out of the table; JPG captures; system OpenXR runtime. 0.6.9.2 - whole-table picking fixed (view setup 0x575A00 hooked: tile selection uses the same focal); options screen stacked on the timer bar under the health bar; VDXR runtime preferred. 0.6.9.1 - picking off, options screen stacked. 0.6.9 - whole table pickable (game camera focal widened while the table is shown); wall screen from middle draws only; original room textures; glow hands; smaller pedestal button. 0.6.8 - wall screen detection ignores held model/cursor area; smaller held creature; rusted pedestal with side button, drawn before the tray; earthen room. 0.6.7.1 - wall screen only when a menu/options screen is open; held window only with the laser on the table, scaled like the hand. 0.6.7 - laser picks the dungeon triangles; hand size fixed; held window wider; wall = whole game area, bars stacked over the panel. 0.6.6.1 - interface-texture filter off (game texture cache blocks are shared by UI and world). 0.6.6 - laser on the table drives the game cursor (inverse projection), trigger/A = clicks. 0.6.5.3 - held things = HUD window around the cursor (panels erased); 3D interface cards out of the dungeon. 0.6.5.2 - held things only near the cursor and outside panels the cursor is not on. 0.6.5.1 - top-down: engine rectangle = projected table (exact); game screen panel off (F3); texture upload callers measured. 0.5.15 - far distance x3 with the top-down camera (cross-shaped table when zoomed out). 0.5.14 - no near-edge shift with the top-down camera, wider side margin. 0.5.13 - steep (top-down) game camera while the table is shown. 0.5.12 - table near edge follows the nearest geometry the game draws. 0.5.11 - texture cache patch address fixed, table near edge kept in the engine's reach. 0.5.10 - real texture cache (SurfHashList2 512 -> 1536), pan prediction limited. 0.5.9 - larger player-side / side margins (holes while dragging). 0.5.8 - table depth shared between far and player sides (player-side strip), far from the screen far edge. 0.5.7 - vertical enlargement on both screen edges again (player side filled in 0.5.2), far limited to the corner ratio. 0.5.6 - texture cache byte+hook+real count, far distance for the far corners. 0.5.5 - texture cache 256 blocks (constructor call), far edge fixed / sides+player side only. 0.5.4.1 - fix: lockBuf/unlockBuf wrappers used wrong stack sizes (crash at start). 0.5.4 - near corners (+30 % player side), surface-lock measurement. 0.5.3 - game texture shadow (no GPU wait on texture locks), no fresh-image wait, wider corner margin. 0.5.2 - table view exactly as validated in 0.4.7 (TileCover removed) + VR state cache, full resolution, ceiling clip. Was 0.5.0 (base 0.4.7) - VR state cache, full headset resolution, engine tiles = table (corners), ceiling clip. 0.4.7 - table shows the whole PC screen view (TableView), anisotropic x16 VR textures, table 0.50 m below the eyes.
+// DK2VR 0.6.9.6 - texture detail fix with exact addresses; options screen closes again; UI-over-bars test tolerant; pedestal column under the plate. 0.6.9.5 - texture detail follows the focal factor (21 LOD compares redirected); F12 removed; pedestal plate restored. 0.6.9.4 - crash log (exception handler); interface over the bars kept out of the table while the table fits between them; F12 toggles whole-table picking. 0.6.9.3.1 - host linked to openxr_loader.dll (was libopenxr_loader.dll: start failure). 0.6.9.3 - options screen whole (stats bar included) and steady under the laser; pedestal plate removed; adaptive focal factor (sharper textures); 3D interface pieces over the bottom bars kept out of the table; JPG captures; system OpenXR runtime. 0.6.9.2 - whole-table picking fixed (view setup 0x575A00 hooked: tile selection uses the same focal); options screen stacked on the timer bar under the health bar; VDXR runtime preferred. 0.6.9.1 - picking off, options screen stacked. 0.6.9 - whole table pickable (game camera focal widened while the table is shown); wall screen from middle draws only; original room textures; glow hands; smaller pedestal button. 0.6.8 - wall screen detection ignores held model/cursor area; smaller held creature; rusted pedestal with side button, drawn before the tray; earthen room. 0.6.7.1 - wall screen only when a menu/options screen is open; held window only with the laser on the table, scaled like the hand. 0.6.7 - laser picks the dungeon triangles; hand size fixed; held window wider; wall = whole game area, bars stacked over the panel. 0.6.6.1 - interface-texture filter off (game texture cache blocks are shared by UI and world). 0.6.6 - laser on the table drives the game cursor (inverse projection), trigger/A = clicks. 0.6.5.3 - held things = HUD window around the cursor (panels erased); 3D interface cards out of the dungeon. 0.6.5.2 - held things only near the cursor and outside panels the cursor is not on. 0.6.5.1 - top-down: engine rectangle = projected table (exact); game screen panel off (F3); texture upload callers measured. 0.5.15 - far distance x3 with the top-down camera (cross-shaped table when zoomed out). 0.5.14 - no near-edge shift with the top-down camera, wider side margin. 0.5.13 - steep (top-down) game camera while the table is shown. 0.5.12 - table near edge follows the nearest geometry the game draws. 0.5.11 - texture cache patch address fixed, table near edge kept in the engine's reach. 0.5.10 - real texture cache (SurfHashList2 512 -> 1536), pan prediction limited. 0.5.9 - larger player-side / side margins (holes while dragging). 0.5.8 - table depth shared between far and player sides (player-side strip), far from the screen far edge. 0.5.7 - vertical enlargement on both screen edges again (player side filled in 0.5.2), far limited to the corner ratio. 0.5.6 - texture cache byte+hook+real count, far distance for the far corners. 0.5.5 - texture cache 256 blocks (constructor call), far edge fixed / sides+player side only. 0.5.4.1 - fix: lockBuf/unlockBuf wrappers used wrong stack sizes (crash at start). 0.5.4 - near corners (+30 % player side), surface-lock measurement. 0.5.3 - game texture shadow (no GPU wait on texture locks), no fresh-image wait, wider corner margin. 0.5.2 - table view exactly as validated in 0.4.7 (TileCover removed) + VR state cache, full resolution, ceiling clip. Was 0.5.0 (base 0.4.7) - VR state cache, full headset resolution, engine tiles = table (corners), ceiling clip. 0.4.7 - table shows the whole PC screen view (TableView), anisotropic x16 VR textures, table 0.50 m below the eyes.
 // DK2VR 0.4.4 - wooden tray bottom under the dungeon (instead of the dark plate).
 // DK2VR 0.4.3 - room prepared from the game start at normal priority, disk cache (Cache\DK2VR_room.cache),
 //                SSE2 floating point for the generators (0.4.2 measured 18 s in the background).
@@ -63,7 +63,7 @@ using Microsoft::WRL::ComPtr;
 using namespace dk2vr;
 
 namespace {
-constexpr const char* Version="0.6.9.5";
+constexpr const char* Version="0.6.9.6";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -682,17 +682,18 @@ struct LensHack {
     inline static double thresholds[3]={1.0,.5,.25};
     static void lodThresholds(float k) {thresholds[0]=k;thresholds[1]=k*.5;thresholds[2]=k*.25;}
     static void installLod(uintptr_t base) {
-        const uint32_t sites[7]={0x57f050,0x57f92f,0x580017,0x5815da,0x585024,0x58630b,0x5871d6};
-        const uint32_t steps[3]={0,0x12,0x24}; // fcom 1.0 / fcom 0.5 / fcomp 0.25 follow at +0x12 / +0x24
+        // 0.6.9.6: exact addresses (0.6.9.5 assumed the same spacing everywhere: 0x5815DA differs -> fix refused).
+        const uint32_t addr[7][3]={{0x57f050,0x57f062,0x57f074},{0x57f92f,0x57f941,0x57f953},{0x580017,0x580029,0x58003b},
+            {0x5815da,0x5815e9,0x5815fb},{0x585024,0x585033,0x585045},{0x58630b,0x58631d,0x58632f},{0x5871d6,0x5871e8,0x5871fa}};
         const uint32_t consts[3]={0x66fc00,0x66fc08,0x66fc10};
         // Every site checked first; nothing patched unless all 21 instructions are exactly as expected.
-        for(uint32_t s:sites) for(int i=0;i<3;++i) {
-            const unsigned char* q=reinterpret_cast<const unsigned char*>(base-0x400000+s+steps[i]);
+        for(auto& s:addr) for(int i=0;i<3;++i) {
+            const unsigned char* q=reinterpret_cast<const unsigned char*>(base-0x400000+s[i]);
             uint32_t d;memcpy(&d,q+2,4);
-            if(q[0]!=0xdc||q[1]!=(i==2?0x1d:0x15)||d!=uint32_t(base-0x400000+consts[i])) {log("Texture detail: site %06X+%X unsupported, detail fix off",unsigned(s),unsigned(steps[i]));return;}
+            if(q[0]!=0xdc||q[1]!=(i==2?0x1d:0x15)||d!=uint32_t(base-0x400000+consts[i])) {log("Texture detail: site %06X unsupported, detail fix off",unsigned(s[i]));return;}
         }
-        for(uint32_t s:sites) for(int i=0;i<3;++i) {
-            unsigned char* q=reinterpret_cast<unsigned char*>(base-0x400000+s+steps[i]);
+        for(auto& s:addr) for(int i=0;i<3;++i) {
+            unsigned char* q=reinterpret_cast<unsigned char*>(base-0x400000+s[i]);
             DWORD old=0;if(!VirtualProtect(q+2,4,PAGE_EXECUTE_READWRITE,&old)) continue;
             uint32_t d=uint32_t(reinterpret_cast<uintptr_t>(&thresholds[i]));memcpy(q+2,&d,4);
             DWORD ig=0;VirtualProtect(q+2,4,old,&ig);FlushInstructionCache(GetCurrentProcess(),q,6);
@@ -1363,7 +1364,7 @@ struct Renderer {
     ComPtr<IDirect3DTexture9> uiTex;ComPtr<IDirect3DSurface9> uiSurf,cursorBackup;UINT uiW=0,uiH=0;bool uiCleared=false,uiFailed=false,hudErase=true;
     bool cursorFound=false,cursorBacked=false;RECT cursorRect{},cursorSaved{};uint32_t cursorCopy=0;float cursorUv[4]{},cursorW=0,cursorH=0,cursorHotX=0,cursorHotY=0;
     float cursorPx=-1,cursorPy=-1;bool cursorKnown=false;bool holdingThings=false,heldModel=false;float heldBox[4]{};bool heldCleared=false,keeperHeld=true;float heldRadius=200,heldPx=0,heldPy=0;ComPtr<IDirect3DTexture9> heldTex;ComPtr<IDirect3DSurface9> heldSurf;bool heldWindow=true,uiTexFilter=false;std::unordered_set<void*> uiTextures;uint64_t statUiIn3d=0;uint64_t statHeldDraws=0,statHeldFrames=0,statHeldFar=0,statHeldPanel=0,statHoldCount=0,statUiFrames=0;bool handToController=true,cursorFromUi=false;int firstUiLogs=0;UINT backW=0,backH=0;uint64_t lastUiProbe=0;DWORD probeCursorInfo[4]{};HudSizes hudSizes{};
-    bool ui3dFilter=true,pickFits=false;float worldRhw=0;uint64_t statUi3d=0;float pickMin=.30f,pickTop=.07f,pickBottom=.68f,pickWant=1.f;uint64_t pickLogs=0;
+    bool ui3dFilter=true,pickFits=false;int uiDiagLogs=0;float worldRhw=0;uint64_t statUi3d=0;float pickMin=.30f,pickTop=.07f,pickBottom=.68f,pickWant=1.f;uint64_t pickLogs=0;
     float pickScale=.34f;ComPtr<IDirect3DTexture9> screenTex;ComPtr<IDirect3DSurface9> screenSurf;bool screenCleared=false,screenFailed=false;int pedestalSide=0;bool buttonHover=false;uint64_t statButtonClicks=0;bool screenActive=false,lastPointerOnTable=false;int screenHold=0;float midX0=1e9f,midY0=1e9f,midX1=-1e9f,midY1=-1e9f;uint64_t statScreenFrames=0;bool pickActive=false,pickFound=false,lastPickValid=false;float pickT=0,lastPickDist=0,lastPickFx=0,lastPickFy=0;uint64_t statPickHits=0,statPlaneHits=0;Vec3 pickO{},pickD{};Projection pointerLens{};bool pointerLensOk=false,tablePointer=true;uint64_t statTableHits=0,statTableClicks=0;float lastTableX=0,lastTableY=0;UINT lastHudW=0,lastHudH=0;float lastHudTop=0;bool hudLatchL=false,hudLatchR=false,hudTrigBefore=false,hudSecondBefore=false;int hudTarget=-1;
     uint64_t statUiDraws=0,statCursorFrames=0,statHudFrames=0,statHudHits=0,statHudClicks=0;float lastPointerX=-1,lastPointerY=-1;
     bool loggedDepthState=false;
@@ -1732,7 +1733,7 @@ struct Renderer {
                 if(dy>1e-3f) s=std::min(s,(B-lens.centerY)/dy); else if(dy<-1e-3f) s=std::min(s,(T-lens.centerY)/dy);
             }
             float target=ok&&std::isfinite(s)&&s>0?std::clamp(a*s,pickMin,1.f):pickMin;
-            pickFits=ok&&std::isfinite(s)&&s>=.98f&&a<.999f; // table currently between the bars
+            pickFits=ok&&std::isfinite(s)&&s>=.90f&&a<.999f; // 0.6.9.6: .98 was stricter than the 3 % smoothing step -> often off // table currently between the bars
             if(std::fabs(target-pickWant)>.03f) pickWant+=(target-pickWant)*.15f;
             pickWant=std::clamp(pickWant,pickMin,1.f);
             if(pickLogs<12&&std::fabs(pickWant-target)<.01f&&std::fabs(target-float(LensHack::applied))>.05f) {++pickLogs;log("Table picking: focal factor -> x%.2f (min x%.2f, bars %.2f-%.2f)",target,pickMin,pickTop,pickBottom);}
@@ -1855,7 +1856,10 @@ struct Renderer {
             middleDraw=cy>.10f&&cy<.69f&&z1-z0<=1e-4f;
             // 0.6.9.3: once the options screen is shown, draws near the cursor count again: with the laser on the
             // menu the cursor lies among its items, the measured size fell under the threshold -> menu blinking.
-            if(middleDraw&&(!nearCursor||screenActive)) {midX0=std::min(midX0,x0);midY0=std::min(midY0,y0);midX1=std::max(midX1,x1);midY1=std::max(midY1,y1);}
+            // 0.6.9.6: 0.6.9.5 kept the screen 'open' after the options closed (cursor + tooltip counted). While shown,
+            // only the cursor sprite's close surroundings are ignored (the menu items near the cursor count again).
+            const bool nearSprite=cursorKnown&&cx>cursorPx-.5f*R&&cx<cursorPx+1.f*R&&cyy>cursorPy-.5f*R&&cyy<cursorPy+.8f*R;
+            if(middleDraw&&(screenActive?!nearSprite:!nearCursor)) {midX0=std::min(midX0,x0);midY0=std::min(midY0,y0);midX1=std::max(midX1,x1);midY1=std::max(midY1,y1);}
         }
         if(cursorKnown&&count>0&&count<=64) {
             const auto* in=static_cast<const unsigned char*>(verts);float x0=1e9f,y0=1e9f,x1=-1e9f,y1=-1e9f;
@@ -2139,7 +2143,8 @@ struct Renderer {
          // table content (tiles out of the table are clipped anyway) -> interface.
          if(ui3dFilter&&uiH>0&&request.mode!=2) {
              const float ih=std::min(float(uiH),uiW*.75f),oy=(uiH-ih)*.5f,ty=(y0-oy)/ih,by=(y1-oy)/ih,cy=((y0+y1)*.5f-oy)/ih;
-             const bool overBars=pickFits&&(ty>=std::max(pickBottom,.69f)||by<=std::min(pickTop,.07f));
+             const bool overBars=pickFits&&(ty>=std::max(pickBottom,.69f)||cy>=.74f||by<=std::min(pickTop,.07f));
+             if(!overBars&&by>.69f&&uiDiagLogs<30&&y1-y0>.02f*ih) {++uiDiagLogs;log("3D draw reaching the bars kept in the dungeon: y %.2f-%.2f count %u fits %d",ty,by,count,int(pickFits));}
              if(overBars||(near3&&count<=256&&cy>.69f)) {++statUi3d;if(hudWanted()) uiReplay(d,type,primitives,verts,stride,indices,indexFormat,count,fvf);return;}
          }}
         Projection lens{};
@@ -2593,7 +2598,7 @@ struct Renderer {
             }
             p->pickDistance=lastPickDist;
             {const float iw=std::min(float(uiW),uiH*4.f/3.f),ih=std::min(float(uiH),uiW*.75f);
-             if(midX1-midX0>.40f*iw&&midY1-midY0>.30f*ih) screenHold=45; else if(screenHold>0) --screenHold;
+             {const float kw=screenActive?.30f:.40f,kh=screenActive?.20f:.30f; if(midX1-midX0>kw*iw&&midY1-midY0>kh*ih) screenHold=30; else if(screenHold>0) --screenHold;}
              screenActive=screenHold>0;if(screenActive) ++statScreenFrames;
              midX0=midY0=1e9f;midX1=midY1=-1e9f;}
             p->screenShown=screenActive;
