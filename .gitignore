@@ -19,3 +19,4 @@ DK2VR_Rapport_*.zip
 # Divers
 .DS_Store
 Thumbs.db
+out/*Tests
