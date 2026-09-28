@@ -66,6 +66,32 @@ bool savePng(const fs::path& path,UINT w,UINT h,UINT pitch,const void* pixels) {
     if(FAILED(frame->WritePixels(h,w*4,UINT(opaque.size()),opaque.data()))) return false;
     return SUCCEEDED(frame->Commit())&&SUCCEEDED(encoder->Commit());
 }
+// 0.6.9.3 : captures en JPEG (qualite 0,88), les yeux > 2048 px reduits de moitie (moyenne 2x2),
+// pour que le rapport tienne sous la limite d'envoi (~30 Mo). Repli PNG puis BMP si WIC echoue.
+bool saveJpg(const fs::path& path,UINT w,UINT h,UINT pitch,const void* pixels) {
+    const UINT f=w>2048?2:1;const UINT ow=w/f,oh=h/f;
+    std::vector<BYTE> rgb(size_t(ow)*oh*3);
+    for(UINT y=0;y<oh;++y) for(UINT x=0;x<ow;++x) {
+        UINT s[3]{};
+        for(UINT dy=0;dy<f;++dy) for(UINT dx2=0;dx2<f;++dx2) {
+            const BYTE* p=static_cast<const BYTE*>(pixels)+size_t(y*f+dy)*pitch+size_t(x*f+dx2)*4;
+            s[0]+=p[0];s[1]+=p[1];s[2]+=p[2];
+        }
+        BYTE* d=rgb.data()+(size_t(y)*ow+x)*3;for(int c=0;c<3;++c) d[c]=BYTE(s[c]/(f*f));
+    }
+    ComPtr<IWICImagingFactory> factory;ComPtr<IWICStream> stream;ComPtr<IWICBitmapEncoder> encoder;ComPtr<IWICBitmapFrameEncode> frame;ComPtr<IPropertyBag2> props;
+    if(FAILED(CoCreateInstance(CLSID_WICImagingFactory,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&factory)))) return false;
+    if(FAILED(factory->CreateStream(&stream))||FAILED(stream->InitializeFromFilename(path.c_str(),GENERIC_WRITE))) return false;
+    if(FAILED(factory->CreateEncoder(GUID_ContainerFormatJpeg,nullptr,&encoder))||FAILED(encoder->Initialize(stream.Get(),WICBitmapEncoderNoCache))) return false;
+    if(FAILED(encoder->CreateNewFrame(&frame,&props))) return false;
+    PROPBAG2 option{};option.pstrName=const_cast<LPOLESTR>(L"ImageQuality");
+    VARIANT value{};value.vt=VT_R4;value.fltVal=0.88f;props->Write(1,&option,&value);
+    if(FAILED(frame->Initialize(props.Get()))||FAILED(frame->SetSize(ow,oh))) return false;
+    WICPixelFormatGUID format=GUID_WICPixelFormat24bppBGR;
+    if(FAILED(frame->SetPixelFormat(&format))||format!=GUID_WICPixelFormat24bppBGR) return false;
+    if(FAILED(frame->WritePixels(oh,ow*3,UINT(rgb.size()),rgb.data()))) return false;
+    return SUCCEEDED(frame->Commit())&&SUCCEEDED(encoder->Commit());
+}
 bool saveBmp(const fs::path& path,UINT w,UINT h,UINT pitch,const void* pixels) {
     FILE* f=nullptr;_wfopen_s(&f,path.c_str(),L"wb");if(!f) return false;
     BITMAPFILEHEADER header{};BITMAPINFOHEADER info{};
@@ -282,8 +308,9 @@ struct Host {
         configuration=ini;
         // 0.6.9.2: Virtual Desktop's own OpenXR runtime (VDXR) is preferred when it is installed: through SteamVR
         // the same Quest ran at 64 images/s (host loop > 8 ms every frame) instead of 90 (0.6.9 / 0.6.9.1 reports).
-        // OpenXRRuntime=auto (default) tries VDXR first and falls back to the system runtime if it has no headset.
-        wchar_t choice[32]{};GetPrivateProfileStringW(L"VR",L"OpenXRRuntime",L"auto",choice,32,ini.c_str());
+        // OpenXRRuntime=auto tries VDXR first and falls back to the system runtime if it has no headset.
+        // 0.6.9.3: default is now "system" (user request: no runtime detection, plain OpenXR).
+        wchar_t choice[32]{};GetPrivateProfileStringW(L"VR",L"OpenXRRuntime",L"system",choice,32,ini.c_str());
         std::wstring vdxr;
         if(_wcsicmp(choice,L"system")!=0&&!GetEnvironmentVariableW(L"XR_RUNTIME_JSON",nullptr,0)) {
             HKEY key=nullptr;
@@ -540,9 +567,12 @@ struct Host {
                         swprintf(stamp,64,L"DK2VR_%04u%02u%02u_%02u%02u%02u_%03u",t.wYear,t.wMonth,t.wDay,t.wHour,t.wMinute,t.wSecond,++captureCount);
                         captureStamp=stamp;
                     }
-                    fs::path file=folder/(captureStamp+L"_"+names[j]+L".png");
-                    if(!savePng(file,desc.Width,desc.Height,mapped.RowPitch,mapped.pData)) {
-                        file.replace_extension(L".bmp");saveBmp(file,desc.Width,desc.Height,mapped.RowPitch,mapped.pData);
+                    fs::path file=folder/(captureStamp+L"_"+names[j]+L".jpg");
+                    if(!saveJpg(file,desc.Width,desc.Height,mapped.RowPitch,mapped.pData)) {
+                        file.replace_extension(L".png");
+                        if(!savePng(file,desc.Width,desc.Height,mapped.RowPitch,mapped.pData)) {
+                            file.replace_extension(L".bmp");saveBmp(file,desc.Width,desc.Height,mapped.RowPitch,mapped.pData);
+                        }
                     }
                     context->Unmap(staging.Get(),0);
                 }
@@ -722,7 +752,7 @@ struct Host {
 int wmain(int argc,wchar_t** argv) {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);fs::path root=fs::path(module).parent_path();
     logfile=_wfsopen((root/L"DK2VR-host.log").c_str(),L"w",_SH_DENYNO);
-    log("Dungeon Keeper II VR 0.6.9.2 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
+    log("Dungeon Keeper II VR 0.6.9.3 - prototype experimental OpenXR x64 (protocole %u)",ProtocolVersion);
     bool probe=false,noLaunch=false;fs::path game=root/L"Game"/L"DKII-DX.exe";std::wstring arguments=L"-NOMOVIES";
     for(int i=1;i<argc;++i) {
         std::wstring a=argv[i];

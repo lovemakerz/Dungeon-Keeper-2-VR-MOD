@@ -1,4 +1,4 @@
-# DK2VR 0.6.9.2 - prepare (first launch) or update (every launch) the VR copy of the game.
+# DK2VR 0.6.9.3 - prepare (first launch) or update (every launch) the VR copy of the game.
 param([string]$SourceGame = (Join-Path $PSScriptRoot '..\Dungeon Keeper 2'))
 $ErrorActionPreference = 'Stop'
 $source = [IO.Path]::GetFullPath($SourceGame)
@@ -11,6 +11,19 @@ if (!(Test-Path -LiteralPath $executable)) { throw "Jeu introuvable : $source" }
 $expected = 'A5957E8C52B6DEE80DDF6CC1D3EA5079AAAAD4D11B40E0F067D34FF4157CE9BB'
 $actual = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash
 if ($actual -ne $expected) { throw 'Cette version experimentale demande le DKII-DX.exe 1.70 verifie. Le jeu a une autre empreinte : aucune copie modifiee.' }
+# 0.6.9.3: the ddraw.dll wrapper (dxwrapper fork) is not rebuilt in the cloud; when missing it is taken from the
+# most recent previous DK2VR_V* folder next to this one (read only, the previous version is left intact).
+$wrapper = Join-Path $PSScriptRoot 'payload\ddraw.dll'
+if (!(Test-Path -LiteralPath $wrapper)) {
+    $parentDir = Split-Path -Parent $PSScriptRoot
+    $donor = Get-ChildItem -LiteralPath $parentDir -Directory -Filter 'DK2VR_V*' -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -ne $PSScriptRoot -and (Test-Path -LiteralPath (Join-Path $_.FullName 'payload\ddraw.dll')) } |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($donor) {
+        Copy-Item -LiteralPath (Join-Path $donor.FullName 'payload\ddraw.dll') -Destination $wrapper -Force
+        Write-Host ('Composant ddraw.dll repris depuis ' + $donor.Name)
+    } else { throw 'Composant manquant : ddraw.dll. Placez ce dossier a cote de votre dossier DK2VR_V0.6.9.2.' }
+}
 foreach ($name in 'ddraw.dll','DK2VR.dll','ddraw.ini') {
     if (!(Test-Path -LiteralPath (Join-Path $PSScriptRoot "payload\$name"))) { throw "Composant manquant : $name" }
 }
@@ -37,7 +50,7 @@ if (!(Test-Path -LiteralPath $marker)) {
         Copy-Item -Path (Join-Path $saves '*') -Destination (Join-Path $target 'Data\Save') -Recurse -Force
         Write-Host ('Sauvegardes reprises depuis ' + $previous.Name)
     }
-    [ordered]@{Version='0.6.9.2';Original=$source;ExecutableSHA256=$actual;Created=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
+    [ordered]@{Version='0.6.9.3';Original=$source;ExecutableSHA256=$actual;Created=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
 }
 foreach ($name in 'ddraw.dll','DK2VR.dll','ddraw.ini') {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "payload\$name") -Destination (Join-Path $target $name) -Force

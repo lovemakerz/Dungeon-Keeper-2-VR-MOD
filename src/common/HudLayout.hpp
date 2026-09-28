@@ -19,6 +19,10 @@ constexpr HudRegion HudRegions[HudCount]={
     {0.f,.760f,.178f,1.f},    // minimap and its four corner buttons
     {.182f,.760f,1.f,1.f},    // creatures / rooms / spells panel
     {0.f,.090f,1.f,.715f}};   // everything in between (down to 'Continue game' of the options screen): options screen, menus, tooltips (front wall)
+// 0.6.9.3: while the options screen is open, its panel shows the whole game area from below the top bar down to
+// the bottom of the statistics bar, taken from the full interface texture (options + statistics bar composed in
+// the game's own order): 'Continue game' overlaps the statistics bar, a separate statistics panel kept a piece of it.
+constexpr HudRegion HudScreenWhole={0.f,.090f,1.f,.760f};
 // pointerFlags bits 8.. carry the HUD settings chosen on the host (F2 etc.).
 constexpr uint32_t PointerAimValid=1u<<3,PointerTriggerRaw=1u<<4,PointerSecondRaw=1u<<5;
 constexpr uint32_t HudLeftHanded=1u<<8,HudBottomNear=1u<<9;
@@ -32,9 +36,9 @@ struct HudLayout {
     // 0.6.8: button on the pedestal column (moves the pedestal to the other side of the table).
     bool button=false;Pose buttonPose{};float buttonW=0,buttonH=0;bool arrowRight=false;
 };
-inline void hudPixels(int i,float W,float H,float& x0,float& y0,float& x1,float& y1) {
+inline void hudPixels(int i,float W,float H,float& x0,float& y0,float& x1,float& y1,bool screenWhole=false) {
     const float iw=std::min(W,H*4.f/3.f),ih=std::min(H,W*3.f/4.f),ox=(W-iw)*.5f,oy=(H-ih)*.5f;
-    const HudRegion& r=HudRegions[i];
+    const HudRegion& r=(screenWhole&&i==HudScreen)?HudScreenWhole:HudRegions[i];
     x0=ox+r.u0*iw;y0=oy+r.v0*ih;x1=ox+r.u1*iw;y1=oy+r.v1*ih;
 }
 inline Quat hudFacing(Vec3 from,Vec3 to,float tiltDegrees) {
@@ -47,9 +51,9 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
     HudLayout L;
     if(W<64||H<64) return L;
     auto set=[&](int i,const Pose& p,float width){
-        HudPanel& q=L.panel[i];hudPixels(i,W,H,q.x0,q.y0,q.x1,q.y1);
+        HudPanel& q=L.panel[i];hudPixels(i,W,H,q.x0,q.y0,q.x1,q.y1,screen);
         q.pose=p;q.w=width;q.h=width*(q.y1-q.y0)/std::max(1.f,q.x1-q.x0);q.shown=true;};
-    auto height=[&](int i,float width){float x0,y0,x1,y1;hudPixels(i,W,H,x0,y0,x1,y1);return width*(y1-y0)/std::max(1.f,x1-x0);};
+    auto height=[&](int i,float width){float x0,y0,x1,y1;hudPixels(i,W,H,x0,y0,x1,y1,screen);return width*(y1-y0)/std::max(1.f,x1-x0);};
     const bool floorKnown=r.handFlags&RequestFloorKnown;
     const float floorY=floorKnown?r.floorY:r.table.position.y-.78f;
     const Vec3 head=scale(add(r.eyes[0].pose.position,r.eyes[1].pose.position),.5f);
@@ -69,11 +73,11 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
     auto stack=[&](const Pose& bottom,float w){
         const float hb=height(HudBottom,w),hs=height(HudStats,w),ht=height(HudTop,w),gap=.012f;
         set(HudBottom,bottom,w);
-        float y=hb*.5f+gap+hs*.5f;
-        set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y,0}}),w);
-        y+=hs*.5f;
+        float y=hb*.5f+gap;
+        // 0.6.9.3: options open -> one whole panel (options + statistics bar), no separate statistics panel.
         if(screen) {const float hsc=height(HudScreen,w);
             set(HudScreen,compose(bottom,Pose{{0,0,0,1},{0,y+hsc*.5f,0}}),w);y+=hsc;}
+        else {set(HudStats,compose(bottom,Pose{{0,0,0,1},{0,y+hs*.5f,0}}),w);y+=hs;}
         set(HudTop,compose(bottom,Pose{{0,0,0,1},{0,y+gap+ht*.5f,0}}),w);};
     if(r.pointerFlags&HudBottomNear) {
         const float w=std::min(s.bottom,.45f)*1.15f,h=height(HudBottom,w),tilt=-60.f;

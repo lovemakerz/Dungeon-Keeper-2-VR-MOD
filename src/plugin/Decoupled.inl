@@ -439,10 +439,7 @@ void coloredBox(std::vector<OverlayVertex>& mesh,const Pose& pose,Vec3 lo,Vec3 h
 // 0.6.8: rusted iron pedestal (colour variations per part) + side button with an arrow on the column.
 void buildPedestal(const HudLayout& hud,std::vector<OverlayVertex>& mesh,bool hover=false) {
     const Pose& t=hud.pedestalTop;
-    // Plate: the minimap lies on its front face (+Z), 3 cm thick.
-    coloredBox(mesh,t,{-hud.plateW*.5f,-hud.plateH*.5f,-.035f},{hud.plateW*.5f,hud.plateH*.5f,-.004f},0xff5a3522,0xff3b2216);
-    // Rim of darker iron around the plate.
-    coloredBox(mesh,t,{-hud.plateW*.5f-.012f,-hud.plateH*.5f-.012f,-.040f},{hud.plateW*.5f+.012f,hud.plateH*.5f+.012f,-.030f},0xff3e2518,0xff2a170e);
+    // 0.6.9.3: no more rectangular plate / rim behind the minimap (user request): the round map sits alone on the column.
     // Column: vertical, from the floor to under the plate.
     Vec3 under=toWorld(t,{0,-hud.plateH*.25f,-.03f});
     float bottom=hud.pedestalFoot.y,topY=under.y;
@@ -734,7 +731,7 @@ struct VrThread {
         std::vector<HudVertex> sv;
         for(int i=0;i<HudCount;++i) {
             const HudPanel& q=hud.panel[i];if(!q.shown) continue;
-            quad(i==HudScreen?sv:v,q.pose,q.w,q.h,q.x0/W,q.y0/H,q.x1/W,q.y1/H);
+            quad(v,q.pose,q.w,q.h,q.x0/W,q.y0/H,q.x1/W,q.y1/H); // 0.6.9.3: options panel from the full interface texture
         }
         d->SetTransform(D3DTS_WORLD,&eyeWorld);d->SetPixelShader(nullptr);d->SetVertexShader(nullptr);
         d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1);

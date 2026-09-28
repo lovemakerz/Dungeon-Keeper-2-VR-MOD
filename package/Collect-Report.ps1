@@ -5,8 +5,8 @@ $names = 'DK2VR-host.log','DK2VR.ini','Game\DK2VR-game.log','Game\ddraw-dkii-dx.
 $files = @($names | ForEach-Object { Join-Path $root $_ } | Where-Object { Test-Path -LiteralPath $_ })
 $captures = Join-Path $root 'Captures'
 if (Test-Path -LiteralPath $captures) {
-    # The 4 most recent captures (3 images each).
-    $files += @(Get-ChildItem -LiteralPath $captures -File | Sort-Object LastWriteTime -Descending | Select-Object -First 12 | ForEach-Object { $_.FullName })
+    # 0.6.9.3 : captures JPG (legeres) -> les 6 plus recentes (3 images chacune). Les anciens PNG sont ignores.
+    $files += @(Get-ChildItem -LiteralPath $captures -File -Filter '*.jpg' | Sort-Object LastWriteTime -Descending | Select-Object -First 18 | ForEach-Object { $_.FullName })
 }
 if ($files.Count -eq 0) { Write-Host 'Aucun journal trouve. Lancez d''abord le jeu avec LANCER_DK2_VR.cmd.'; exit 1 }
 $out = Join-Path $root ('DK2VR_Rapport_' + (Get-Date -Format 'yyyyMMdd_HHmmss') + '.zip')
