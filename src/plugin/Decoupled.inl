@@ -624,7 +624,7 @@ struct VrThread {
         // 0.6.9.15: pixel shader for the bars cut from the game image: black (no interface) becomes transparent,
         // colours premultiplied. Compiled at run time with the system d3dcompiler_47 (no link dependency); without it
         // the bars keep the interface texture (previous behaviour).
-        hudBacking=iniInt(L"HudStoneBacking",1)!=0;
+        hudBacking=iniInt(L"HudStoneBacking",0)!=0; // 0.7.1: transparent again (user request)
         if(iniInt(L"HudFromGameImage",1)!=0) {
             using Compile=HRESULT(WINAPI*)(LPCVOID,SIZE_T,LPCSTR,const D3D_SHADER_MACRO*,ID3DInclude*,LPCSTR,LPCSTR,UINT,UINT,ID3DBlob**,ID3DBlob**);
             HMODULE dc=LoadLibraryW(L"d3dcompiler_47.dll");

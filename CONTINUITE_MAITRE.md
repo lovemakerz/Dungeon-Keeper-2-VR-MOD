@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.0.1 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.7.1 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -109,6 +109,11 @@
   - RETIRÉ : fenêtre de main « HeldFromModel » (cause de la copie des barres sur la table), heuristiques de profondeur rhw (near3 ×3, cartes ×2,5), bascule F12 de la sélection.
   - NOUVEAU : (a) profondeur native effacée (Clear ZBUFFER) au premier draw d'interface qui suit un draw de donjon masqué : le donjon invisible écrivait encore sa profondeur et cachait les pièces d'interface placées en profondeur (« 0 », portrait des compteurs) jusque dans l'image du jeu ; (b) fenêtre de la main : barres effacées SAUF sous la boîte englobante du modèle tenu (heldKeep, ±12 px).
 - **0.7.0.1** (base 0.7.0, NON TESTÉE) — retour 0.7.0 (DK2VR_Rapport_20260928_211723.zip) : options OK ; barres OK mais « 0 » et « i » absents (l'effacement de profondeur n'a pas suffi : cause non trouvée) ; copie des barres + minicarte posée sur la table près de la main (la boîte du modèle tenu = pioche du curseur, très grande, empêchait l'effacement des barres dans la fenêtre de la main). Correctif : effacement complet des barres dans la fenêtre de la main (comportement 0.6.9.2 ; créature éventuellement coupée près des barres).
+- **0.7.1** (base 0.7.0.1, NON TESTÉE) — retour 0.7.0.1 (DK2VR_Rapport_20260928_212330.zip) : plus de copie des barres sur la table = OK (VALIDÉ). Utilisateur exaspéré par les boucles : « remettre en transparent » (la plaque de pierre n'a rien corrigé), corriger « 0 »/« i ».
+  - PREUVE par comparaison : « i » visible en 0.6.9.17, absent en 0.7.0 -> en 0.7.0 on avait retiré les règles rhw (near3 ×3, carte ×2,5) ET ajouté l'effacement de profondeur native. Les deux sont annulés (retour à l'état 0.6.9.17 sur ce point).
+  - Barres de nouveau transparentes (HudStoneBacking=0 par défaut).
+  - SONDE « Buttons probe » : tout draw touchant la zone des boutons (x .42–.53, y .70–.85 de la cible d'interface) est journalisé avec son chemin (2D interface / 3D->HUD / 3D DUNGEON masqué / visible), boîte, rhw min-max, rhw typique, pickFits, texture ; une image toutes les ~150, 240 lignes max. À LIRE EN PRIORITÉ au prochain rapport pour le « 0 ».
+
 
 
 
