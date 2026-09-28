@@ -591,7 +591,7 @@ struct VrThread {
     // the game's LOD bias is replaced by VrLodBias. Diagnostics: filters and texture sizes seen.
     int anisotropy=16;float lodBias=0;bool keepBias=false;
     std::map<uint32_t,uint64_t> filterSeen;std::map<UINT,uint64_t> sizeSeen;int sharpReports=0;
-    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader;
+    std::unordered_map<uint32_t,Opened> textures;std::unordered_map<uint32_t,ComPtr<IDirect3DPixelShader9>> shaders;ComPtr<IDirect3DPixelShader9> barShader;bool hudBacking=true;
     uint32_t cacheEpoch=0;uint64_t frames=0;
     struct Images {ComPtr<IDirect3DTexture9> color[3];ComPtr<IDirect3DSurface9> target[3],depth;HANDLE handles[3]{};UINT w=0,h=0,dw=0,dh=0;uint32_t generation=0;};
     Images images[SlotCount];ComPtr<IDirect3DQuery9> query;
@@ -624,6 +624,7 @@ struct VrThread {
         // 0.6.9.15: pixel shader for the bars cut from the game image: black (no interface) becomes transparent,
         // colours premultiplied. Compiled at run time with the system d3dcompiler_47 (no link dependency); without it
         // the bars keep the interface texture (previous behaviour).
+        hudBacking=iniInt(L"HudStoneBacking",1)!=0;
         if(iniInt(L"HudFromGameImage",1)!=0) {
             using Compile=HRESULT(WINAPI*)(LPCVOID,SIZE_T,LPCSTR,const D3D_SHADER_MACRO*,ID3DInclude*,LPCSTR,LPCSTR,UINT,UINT,ID3DBlob**,ID3DBlob**);
             HMODULE dc=LoadLibraryW(L"d3dcompiler_47.dll");
@@ -957,6 +958,14 @@ struct VrThread {
         std::vector<OverlayVertex> hands;hands.reserve(400);if(showHands) buildHands(rr,hands,false);
         std::vector<OverlayVertex> glow;if(showHands) buildGlow(r,p.hudTop,glow);
         std::vector<OverlayVertex> pedestalMesh;if(hudOn&&hud.pedestal) buildPedestal(hud,pedestalMesh,p.buttonHover);
+        // 0.6.9.16: opaque stone slab with a darker frame behind every HUD panel (user request): the panels no longer
+        // show what lies behind them. Minimap excluded (it lies on the pedestal plate).
+        if(hudOn&&hudBacking) for(int i=0;i<HudCount;++i) {
+            const HudPanel& q=hud.panel[i];if(!q.shown||i==HudMinimap) continue;
+            const float w=q.w*.5f,h=q.h*.5f,f=.012f;
+            coloredBox(pedestalMesh,q.pose,{-w-f,-h-f,-.020f},{w+f,h+f,-.010f},0xff2b2723,0xff1f1c19);       // frame
+            coloredBox(pedestalMesh,q.pose,{-w,-h,-.010f},{w,h,-.003f},0xff4d4741,0xff35302b);               // stone face
+        }
         env::Scene::FrameState envFrame;
         bool envOn=environment&&!scene.failed&&(scene.ready||scene.init(dev.Get()))&&scene.prepare(dev.Get(),r,tableAspect,depthRatio,envFrame);
         if(!envOn) buildHandles(r,depthRatio,hands); // 0.3.2 handles when the room is off

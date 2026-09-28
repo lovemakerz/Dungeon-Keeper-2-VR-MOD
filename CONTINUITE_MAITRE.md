@@ -1,6 +1,6 @@
 # CONTINUITE MAITRE — DK2VR
 
-## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.15 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
+## ETAT ACTUEL (2026-09-28) — dernière livrée : 0.6.9.16 (non testée casque) ; dépôt GitHub lovemakerz/dungeon-keeper-2-vr-mod
 - **BASE STABLE DE REFERENCE : V0.5.16** (validée par l'utilisateur : « Version de référence »). Table entière à tous les zooms (caméra top-down), 90 fps casque, UI flottante clippée, panneau F3 désactivé par défaut. NE PAS RÉGRESSER.
 - **En test : V0.6.0** (base 0.5.16) — début de la phase UI. Source : /home/claude/w/v600.
   - Protocole IPC v3 (Request 296 octets : pointerX/Y, pointerFlags, rayLength, rayOrigin, rayDirection ; RequestHudShown bit10).
@@ -96,6 +96,11 @@
   - Pour que l'image finale n'ait pas de donjon sous les barres : quand la table tient entre les barres (pickFits), le rectangle moteur (ViewExpand, projectTable) est borné en hauteur à [min(TablePickTop,0,07) ; 0,69] de l'écran.
   - INCHANGÉ : options (panneau entier, texture HUD, pause), messages (texture screen), fenêtre de la main (texture HUD), curseur.
   - À vérifier : le curseur logiciel du jeu (main) apparaît désormais aussi dans les barres quand on les pointe (il fait partie de l'image finale) ; morceaux de donjon aux bords des barres si une case déborde du rectangle.
+- **0.6.9.16** (base 0.6.9.15, livrée 2026-09-28, NON TESTÉE) — retour 0.6.9.15 (rapport DK2VR_Rapport_20260928_182937.zip) : le donjon se voit dans les parties transparentes/translucides des barres (l'image finale du jeu contient le donjon plein écran ; plusieurs éléments des barres sont translucides ; le bornage du rectangle moteur ne suffit pas) ; créature tenue coupée (côté droit/bas : la fenêtre de la main effaçait les régions des barres, créature comprise). Demande : fond/encadrement opaque style pierre au lieu du transparent.
+  - Donjon masqué dans l'image du jeu : DK2VR_Draw est appelé JUSTE AVANT le draw natif (WrapperBridge.hpp, vérifié) -> pour chaque draw, RAII NativeWrite fixe D3DRS_COLORWRITEENABLE (0 pour les draws du donjon enregistrés pour le casque en vue table, et pour les pièces envoyées à la main ; 15 sinon). État D3D9 jamais utilisé par le jeu DX7. L'écran PC montre l'interface sur fond noir. HideNativeWorld=1.
+  - Fenêtre de la main (HeldFromModel=1) : dès qu'une pièce à z variable près du curseur (modèle tenu) est rejouée, elle et tout ce qui suit dans l'image vont AUSSI dans heldSurf (vidée au premier) ; plus de copie de l'interface ni d'effacement des barres. L'ancien mode reste si HeldFromModel=0.
+  - Plaque de pierre opaque (face 0xff4d4741, cadre 0xff2b2723 de 1,2 cm) derrière chaque panneau HUD sauf la minicarte (maillage du piédestal, écrit la profondeur, dessiné avant le HUD). HudStoneBacking=1.
+
 
 
 
