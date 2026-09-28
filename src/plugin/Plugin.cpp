@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.3";
+constexpr const char* Version="0.8.4";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -889,7 +889,7 @@ struct EngineOrigin {
         memcpy(t,entry,n);t[n]=0xe9;int32_t back=int32_t(reinterpret_cast<uintptr_t>(entry+n)-reinterpret_cast<uintptr_t>(t+n+5));memcpy(t+n+1,&back,4);
         DWORD old=0;VirtualProtect(t,32,PAGE_EXECUTE_READ,&old);
         if(!VirtualProtect(entry,n,PAGE_EXECUTE_READWRITE,&old)) return nullptr;
-        unsigned char jump[8]={0xe9,0,0,0,0,0x90,0x90,0x90};int32_t rel=int32_t(reinterpret_cast<uintptr_t>(hook)-reinterpret_cast<uintptr_t>(entry+5));memcpy(jump+1,&rel,4);
+        unsigned char jump[16];memset(jump,0x90,sizeof(jump));jump[0]=0xe9;int32_t rel=int32_t(reinterpret_cast<uintptr_t>(hook)-reinterpret_cast<uintptr_t>(entry+5));memcpy(jump+1,&rel,4);
         memcpy(entry,jump,n);DWORD ig=0;VirtualProtect(entry,n,old,&ig);
         FlushInstructionCache(GetCurrentProcess(),entry,n);FlushInstructionCache(GetCurrentProcess(),t,32);
         return t;
@@ -957,6 +957,37 @@ struct EngineOrigin {
     }
 };
 void engineOriginNote(uint32_t* sp) {EngineOrigin::note(sp);}
+// 0.8.4: the white view frame of the minimap. The game computes it by projecting the 4 screen corners onto the ground
+// (0x572920, cdecl 4 args, returns a pointer to the result; reads the view focal 0x760AE8) in the function at 0x41B180
+// (calls at 0x41B3DD / 41B418 / 41B447 / 41B47F, then rotates the corners with the camera direction). While the table is
+// shown the focal is scaled by LensHack (k ~ .2-.25) so the game's view is 1/k times larger than what the table shows:
+// the frame came out several times too big (0.8.x report). For those four calls the focal is put back to its unscaled
+// value (focal / k); every other caller (mouse picking, tile selection) keeps the scaled one.
+struct MinimapFrame {
+    using Fn=void*(__cdecl*)(void*,uint32_t,uint32_t,uint32_t);
+    inline static Fn original=nullptr;inline static uintptr_t k=0;inline static uint64_t fixedCalls=0;inline static bool installed=false;
+    __attribute__((force_align_arg_pointer)) static void* __cdecl hook(void* a,uint32_t b,uint32_t c,uint32_t d) {
+        const uintptr_t ret=reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+        const float scale=LensHack::applied;
+        if(ret>=k+0x41b3d0&&ret<k+0x41b500&&scale>.05f&&scale<.999f) {
+            volatile float* focal=reinterpret_cast<volatile float*>(k+0x760ae8);
+            const float saved=*focal;*focal=saved/scale;
+            void* r=original(a,b,c,d);
+            *focal=saved;++fixedCalls;return r;
+        }
+        return original(a,b,c,d);
+    }
+    static void install(uintptr_t base) {
+        if(iniInt(L"MinimapFrameFix",1)==0) {log("Minimap frame: fix off (MinimapFrameFix=0)");return;}
+        k=base-0x400000;
+        const unsigned char sig[]={0x83,0xec,0x1c,0xd9,0x05,0xe8,0x0a,0x76,0x00};
+        if(memcmp(reinterpret_cast<void*>(k+0x572920),sig,3)||memcmp(reinterpret_cast<void*>(k+0x572920+5),sig+5,4)) {log("Minimap frame: screen-to-ground signature unsupported");return;}
+        // the fld operand is an absolute address of the exe at its preferred base: only valid when loaded there
+        if(base!=0x400000) {log("Minimap frame: exe not at its preferred base, fix off");return;}
+        original=reinterpret_cast<Fn>(EngineOrigin::detour(k+0x572920,sig,9,reinterpret_cast<void*>(&hook)));
+        installed=original!=nullptr;log("Minimap frame: view frame corrected while the table is shown (%s)",installed?"hooked 0x572920":"hook failed");
+    }
+};
 struct TopDownCamera {
     using Rebuild=void(__thiscall*)(void*);
     inline static Rebuild rebuild=nullptr;
@@ -1760,6 +1791,7 @@ struct Renderer {
         topDown.init(native);
         PauseWatch::install(native.base);
         PoolGrow::install(native.base);
+        MinimapFrame::install(native.base);
         EngineOrigin::install(native.base); // 0.8.0: interface / dungeon told apart by the engine (origin of each piece)
         LensHack::install(native.base);pickScale=iniFloat(L"TablePickScale",.20f,.12f,1.f); // 0.7.4: floor .30 -> .20 (at .30 the table overlapped the bars: pickFits never true)
         // 0.6.9.3: the focal factor is now the LARGEST one that still puts the whole table between the bars
@@ -3145,7 +3177,7 @@ struct Renderer {
             log("Wall screen (options/menus) shown in %llu frames (game paused flag %ld, changes %ld)",(unsigned long long)statScreenFrames,long(PauseWatch::paused),long(PauseWatch::changes));statScreenFrames=0;
             log("Table picking: game camera focal x%.2f (wanted x%.2f), table between the bars %d, projection setups %ld",float(LensHack::applied),float(LensHack::want),int(pickFits),long(InterlockedExchange(&LensHack::calls,0)));
             log("Table pointer: %llu frames on the table (%llu on dungeon geometry, %llu on the flat table), %llu clicks, last point %.3f,%.3f",(unsigned long long)statTableHits,(unsigned long long)statPickHits,(unsigned long long)statPlaneHits,(unsigned long long)statTableClicks,lastTableX,lastTableY);statTableHits=statTableClicks=statPickHits=statPlaneHits=0;
-            log("Interface in 3D over the bars (Ui3DFilter=%d): %llu draws moved to the HUD",int(ui3dFilter),(unsigned long long)statUi3d);statUi3d=0;
+            log("Interface in 3D over the bars (Ui3DFilter=%d): %llu draws moved to the HUD; minimap frame corners corrected %llu times",int(ui3dFilter),(unsigned long long)statUi3d,(unsigned long long)MinimapFrame::fixedCalls);statUi3d=0;MinimapFrame::fixedCalls=0;
             log("3D draws by engine origin: interface=%llu mixed=%llu (interface triangles %llu, dungeon triangles %llu) dungeon=%llu (of which without any interface mark %llu)",
                 (unsigned long long)statOriginUi,(unsigned long long)statOriginMixed,(unsigned long long)statOriginUiTris,(unsigned long long)statOriginWorldTris,(unsigned long long)statOriginWorld,(unsigned long long)statOriginUntagged);
             statOriginUi=statOriginMixed=statOriginUiTris=statOriginWorldTris=statOriginWorld=statOriginUntagged=0;
