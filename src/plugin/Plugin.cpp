@@ -926,7 +926,7 @@ struct EngineOrigin {
         for(int i=1;i<used;++i) {
             Origin& o=origins[i];decideOne(o);
             o.accDraws=o.accDraws/2+o.winDraws;o.accEdge=o.accEdge/2+o.winEdge;o.winDraws=o.winEdge=0;
-            o.ui=o.cand&&o.accDraws>=4&&o.accEdge*10>=o.accDraws*8;
+            o.ui=false&&o.cand&&o.accDraws>=4&&o.accEdge*10>=o.accDraws*8;
             if(o.ui) uiPrims+=o.prims;
         }
         // Safety valve: the interface is a few pieces; beyond 15 % of the 3D pieces the chains are not understood.
