@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.8";
+constexpr const char* Version="0.8.9";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -1742,7 +1742,7 @@ struct Renderer {
     std::vector<Vec3> positions;
     // 0.8.0: triangle split of the 3D draws by engine origin (interface / dungeon).
     std::vector<uint8_t> originFlags;std::vector<uint32_t> originUi,originWorld,originRemap;std::vector<unsigned char> originUiVerts,originUiIdx,originWorldIdx;
-    uint64_t statButtonRect=0,statOriginUi=0,statOriginMixed=0,statOriginUiTris=0,statOriginWorldTris=0,statOriginWorld=0,statOriginUntagged=0;
+    int smallLogs=0,smallLogsFrame=0;bool f11Down=false,uiDumpPending=false;int uiDumpCount=0;uint64_t statButtonRect=0,statOriginUi=0,statOriginMixed=0,statOriginUiTris=0,statOriginWorldTris=0,statOriginWorld=0,statOriginUntagged=0;
     // 0.3.0 decoupled rendering (DecoupledRendering=1). 0 = the 0.2.9 path, which also stays in use for
     // menus, possession and the flat-screen mode.
     bool decoupledEnabled=true,decoupledFrame=false,frameOpen=false,lastAnchored=false;
@@ -2510,6 +2510,16 @@ struct Renderer {
                 float q[2];memcpy(q,vx,8);bx0=std::min(bx0,q[0]);by0=std::min(by0,q[1]);bx1=std::max(bx1,q[0]);by1=std::max(by1,q[1]);
             }
             if(!marked) ++statOriginUntagged;
+            if(probeFrame&&smallLogs<700&&smallLogsFrame<90&&uiW>0&&uiH>0) {
+                const float ihe=std::min(float(uiH),uiW*.75f),iwe=std::min(float(uiW),uiH*4.f/3.f),oye=(uiH-ihe)*.5f,oxe=(uiW-iwe)*.5f;
+                const float x0=(bx0-oxe)/iwe,x1=(bx1-oxe)/iwe,y0=(by0-oye)/ihe,y1=(by1-oye)/ihe;
+                if(x1-x0<.16f&&y1-y0<.18f&&(y0>=.60f||y1<=.13f)) {
+                    ++smallLogs;++smallLogsFrame;float rmin=1e9f,rmax=-1e9f;
+                    for(UINT i=0;i<count;++i) {float r;memcpy(&r,input+size_t(i)*stride+12,4);rmin=std::min(rmin,r);rmax=std::max(rmax,r);}
+                    const uint32_t r0=(firstId>0&&firstId<256)?EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k):0;
+                    log("Small draw near the bars: n=%u prim=%u type=%d box %.3f,%.3f-%.3f,%.3f rhw %.3f-%.3f setup %06X tagged=%d",count,primitives,int(type),x0,y0,x1,y1,rmin,rmax,r0,int(marked>0));
+                }
+            }
             // 0.8.8: the 3D buttons '0' / 'i' of the bottom bars (24-256 vertices; boxes measured in the 0.7.10 report: x .427-.506 y .761-.866 and
             // x .520-.554 y .792-.886; 0.8.7 looked for 4-8 vertices in a too small rectangle: it kept dungeon quads and missed the buttons) are drawn by the same engine code as the dungeon creatures: no origin rule can find them.
             // Whatever is that small and lies ENTIRELY in that rectangle is interface (never terrain code). Nothing else is added:
@@ -2897,10 +2907,11 @@ struct Renderer {
         lastWorldTime=wt;lastWorldCount=wc;lastEngineTime=et;lastEngineCount=ec;lastEngineHighest=eh;haveCounters=true;
     }
     void present(IDirect3DDevice9* d) {
-        {static uint32_t pf=0;probeFrame=(++pf%150)==0;if(pf%10==0) EngineOrigin::decideAll();}
+        {static uint32_t pf=0;probeFrame=(++pf%150)==0;if(probeFrame) smallLogsFrame=0;if(pf%10==0) EngineOrigin::decideAll();}
         profiler.start(GetCurrentThreadId());profiler.report();profiler.lastPresentTick=GetTickCount64();profiler.stallLogged=false;
         NonBlockingPresent::install(d);
         textureQuality.enforce();
+        {const bool f11=(GetAsyncKeyState(VK_F11)&0x8000)!=0;if(f11&&!f11Down) uiDumpPending=true;f11Down=f11;}
         bool f12=(GetAsyncKeyState(VK_F12)&0x8000)!=0;
         if(f12&&!f12Down) {
             bypass=!bypass;log("VR pause (F12): %s",bypass?"ON - the mod does nothing, measuring the game alone":"OFF");
@@ -3093,6 +3104,37 @@ struct Renderer {
                         heldCleared=true;heldPx=cursorPx;heldPy=cursorPy;
                     }
                 }
+            }
+            if(uiDumpPending) { // 0.8.8: F11 also saves the interface layer and the hand window (BMP, grey behind the transparency) in Captures\
+                uiDumpPending=false;++uiDumpCount;
+                std::error_code ec;auto folder=configurationPath().parent_path()/L"Captures";std::filesystem::create_directories(folder,ec);
+                auto save=[&](IDirect3DSurface9* surf,const wchar_t* tag) {
+                    if(!surf) return;D3DSURFACE_DESC dd{};surf->GetDesc(&dd);
+                    ComPtr<IDirect3DSurface9> sys;
+                    if(FAILED(d->CreateOffscreenPlainSurface(dd.Width,dd.Height,D3DFMT_A8R8G8B8,D3DPOOL_SYSTEMMEM,&sys,nullptr))||FAILED(d->GetRenderTargetData(surf,sys.Get()))) return;
+                    D3DLOCKED_RECT lr{};if(FAILED(sys->LockRect(&lr,nullptr,D3DLOCK_READONLY))) return;
+                    wchar_t name[96];swprintf(name,96,L"DK2VR_calque_%03d_%ls.bmp",uiDumpCount,tag);
+                    FILE* f=_wfopen((folder/name).c_str(),L"wb");
+                    if(f) {
+                        const uint32_t bytes=dd.Width*dd.Height*4;const uint32_t hdr[]={0x4d42|(uint32_t(54+bytes)<<16),0,0,54};
+                        unsigned char h[54]{};h[0]='B';h[1]='M';uint32_t sz=54+bytes,off=54,dib=40,w=dd.Width;int32_t hh=-int32_t(dd.Height);uint16_t pl=1,bp=32;
+                        memcpy(h+2,&sz,4);memcpy(h+10,&off,4);memcpy(h+14,&dib,4);memcpy(h+18,&w,4);memcpy(h+22,&hh,4);memcpy(h+26,&pl,2);memcpy(h+28,&bp,2);memcpy(h+34,&bytes,4);(void)hdr;
+                        fwrite(h,1,54,f);std::vector<uint32_t> row(dd.Width);
+                        for(UINT y=0;y<dd.Height;++y) {
+                            const uint32_t* src=reinterpret_cast<const uint32_t*>(static_cast<const unsigned char*>(lr.pBits)+size_t(y)*lr.Pitch);
+                            for(UINT x=0;x<dd.Width;++x) {
+                                const uint32_t px=src[x];const uint32_t a=px>>24;
+                                auto mix=[&](uint32_t c,uint32_t g){return std::min<uint32_t>(255,c+g*(255-a)/255);};
+                                row[x]=0xff000000u|(mix((px>>16)&255,96)<<16)|(mix((px>>8)&255,102)<<8)|mix(px&255,110);
+                            }
+                            fwrite(row.data(),4,dd.Width,f);
+                        }
+                        fclose(f);
+                    }
+                    sys->UnlockRect();
+                };
+                save(uiSurf.Get(),L"interface");if(heldCleared&&heldSurf) save(heldSurf.Get(),L"main");if(screenActive&&screenCleared&&screenSurf) save(screenSurf.Get(),L"mur");
+                log("Interface layer / hand window / wall panel saved in Captures (calque %d)",uiDumpCount);
             }
             p->pickDistance=lastPickDist;
             {const float iw=std::min(float(uiW),uiH*4.f/3.f),ih=std::min(float(uiH),uiW*.75f);

@@ -7,6 +7,8 @@ $captures = Join-Path $root 'Captures'
 if (Test-Path -LiteralPath $captures) {
     # 0.6.9.3 : captures JPG (legeres) -> les 6 plus recentes (3 images chacune). Les anciens PNG sont ignores.
     $files += @(Get-ChildItem -LiteralPath $captures -File -Filter '*.jpg' | Sort-Object LastWriteTime -Descending | Select-Object -First 18 | ForEach-Object { $_.FullName })
+    # 0.8.9 : calques d'interface (BMP, F11) : les 6 plus recents
+    $files += @(Get-ChildItem -LiteralPath $captures -File -Filter 'DK2VR_calque_*.bmp' | Sort-Object LastWriteTime -Descending | Select-Object -First 6 | ForEach-Object { $_.FullName })
 }
 # 0.6.9.4 : l'executable du jeu (copie VR, jamais modifie sur disque) pour l'analyse du choix des textures et du crash.
 $exe = Join-Path $root 'Game\DKII-DX.exe'
