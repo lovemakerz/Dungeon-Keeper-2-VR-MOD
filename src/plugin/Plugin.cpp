@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.13";
+constexpr const char* Version="0.8.14";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -2531,8 +2531,10 @@ struct Renderer {
                 if(firstId>0&&firstId<256) {const uint32_t r=EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k);terrain=(r>=0x587600&&r<0x587700)||(r>=0x588500&&r<0x588600);}
                 const float ihe=std::min(float(uiH),uiW*.75f),iwe=std::min(float(uiW),uiH*4.f/3.f),oye=(uiH-ihe)*.5f;
                 const float y0=(by0-oye)/ihe,y1=(by1-oye)/ihe,cyy=(y0+y1)*.5f,bwf=(bx1-bx0)/iwe,bhf=y1-y0;
-                const bool plane=rmin>=.36f&&rmax<=.55f&&(rhwWorldEma<=0||rmin>=1.6f*rhwWorldEma);
-                if(plane&&!terrain&&cyy>=.60f&&bwf<.35f&&bhf<.25f) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statButtonRect;}
+                // 0.8.14: measured (0.8.12 report, 'Small draw' lines): buttons n=195 .360-.412, n=322 .360-.417, n=104 .362-.403, n=331 .360-.396, n=187 .360-.421 ->
+                // the plane starts at exactly .360: the 0.8.12 threshold (.36 and 1.6 x the dungeon rhw) missed them, worse when zoomed in (dungeon rhw up).
+                const bool plane=rmin>=.345f&&rmax<=.72f;
+                if(plane&&!terrain&&cyy>=.60f&&((bwf<.35f&&bhf<.25f)||(bhf<.25f&&cyy>=.80f))) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statButtonRect;}
                 else if(rmax<.34f&&count>=40) rhwWorldEma=rhwWorldEma>0?rhwWorldEma+.02f*(rsum/count-rhwWorldEma):rsum/count;
             }
             auto at=[&](UINT n)->uint32_t{return !indices?uint32_t(n):indexFormat==D3DFMT_INDEX32?static_cast<const uint32_t*>(indices)[n]:uint32_t(static_cast<const uint16_t*>(indices)[n]);};
