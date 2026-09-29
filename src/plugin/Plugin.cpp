@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.12";
+constexpr const char* Version="0.8.13";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -3104,6 +3104,13 @@ struct Renderer {
                                 if(k.right<e.right) parts[np++]=RECT{k.right,t0,e.right,t1};
                             }
                             for(int q=0;q<np;++q) if(parts[q].right>parts[q].left&&parts[q].bottom>parts[q].top) d->ColorFill(heldSurf.Get(),&parts[q],0x00000000);}
+                        // 0.8.13: the message / objectives page lies in the interface layer: it was copied into the hand window and showed
+                        // on the table next to the controller. Its region (with a margin) is erased from the hand window.
+                        if(msgShown&&msgRegion.u1>msgRegion.u0) {
+                            RECT e{LONG(std::floor(ox+(msgRegion.u0-.02f)*iw)),LONG(std::floor(oy+(msgRegion.v0-.02f)*ih)),LONG(std::ceil(ox+(msgRegion.u1+.02f)*iw)),LONG(std::ceil(oy+(msgRegion.v1+.02f)*ih))};
+                            e.left=std::max<LONG>(0,e.left);e.top=std::max<LONG>(0,e.top);e.right=std::min<LONG>(LONG(uiW),e.right);e.bottom=std::min<LONG>(LONG(uiH),e.bottom);
+                            if(e.right>e.left&&e.bottom>e.top) d->ColorFill(heldSurf.Get(),&e,0x00000000);
+                        }
                         // (0.6.9.9-0.6.9.10 erased the message box here; 0.6.9.11: the box is no longer in the interface texture.)
                         heldCleared=true;heldPx=cursorPx;heldPy=cursorPy;
                     }

@@ -86,7 +86,7 @@ inline HudLayout layoutHud(const Request& r,const HudSizes& s,float depthRatio,f
         set(HudTop,compose(bottom,Pose{{0,0,0,1},{0,y+gap+ht*.5f,0}}),w);y+=gap+ht;
         // 0.6.9.9: game messages / objectives ABOVE every bar (health bar included); the options screen keeps its place.
         if(screen&&!whole) {const float wm=msg?w*(msg->u1-msg->u0):w,hsc=height(HudScreen,wm); // same scale as the bars
-            const float xm=msg?w*((msg->u0+msg->u1)*.5f-.5f):0.f; // same horizontal place as on the game screen
+            const float xm=0.f; // 0.8.13: centred above the bars (0.6.9.9 kept the game-screen position: text on the left = panel off to the left)
             set(HudScreen,compose(bottom,Pose{{0,0,0,1},{xm,y+gap+hsc*.5f,0}}),wm);}};
     if(r.pointerFlags&HudBottomNear) {
         const float w=std::min(s.bottom,.45f)*1.15f,h=height(HudBottom,w),tilt=-60.f;
