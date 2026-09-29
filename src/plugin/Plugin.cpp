@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.10";
+constexpr const char* Version="0.8.11";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -2524,14 +2524,6 @@ struct Renderer {
             // x .520-.554 y .792-.886; 0.8.7 looked for 4-8 vertices in a too small rectangle: it kept dungeon quads and missed the buttons) are drawn by the same engine code as the dungeon creatures: no origin rule can find them.
             // Whatever is that small and lies ENTIRELY in that rectangle is interface (never terrain code). Nothing else is added:
             // 0.8.6 (whole bars / cursor rules) removed dungeon pieces from the table.
-            // 0.8.10: while something is held (grabbing-hand cursor image) every non-terrain 3D piece centred at the cursor is the held creature
-            // (0.8.9: only its tongue showed: the other pieces were too big / not yet known by the statistics).
-            if(!uiVerts&&keeperW>=100&&keeperH>=100&&cursorKnown&&uiW>0&&uiH>0&&count<=1200) {
-                bool terrain=false;
-                if(firstId>0&&firstId<256) {const uint32_t r=EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k);terrain=(r>=0x587600&&r<0x587700)||(r>=0x588500&&r<0x588600);}
-                const float R=heldRadius*uiW/1024.f,cx=(bx0+bx1)*.5f,cy=(by0+by1)*.5f;
-                if(!terrain&&bx1-bx0<.45f*uiW&&by1-by0<.55f*uiH&&std::fabs(cx-cursorPx)<.9f*R&&std::fabs(cy-cursorPy)<1.2f*R) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statHeldPieces;}
-            }
             if(!uiVerts&&count>=24&&count<=256&&uiW>0&&uiH>0) {
                 bool terrain=false;
                 if(firstId>0&&firstId<256) {const uint32_t r=EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k);terrain=(r>=0x587600&&r<0x587700)||(r>=0x588500&&r<0x588600);}
@@ -2564,7 +2556,7 @@ struct Renderer {
                  const float Re=heldRadius*uiW/1024.f*.6f;const bool holdingNow=keeperW>=100&&keeperH>=100; // grabbing-hand cursor image (118x112 / 134x137) = something is held
                  // Entirely inside the bottom bars / the top bar, or a small piece right at the cursor (held creature, tooltip).
                  const bool inBars=ty>=.66f&&by<=1.02f; // 0.8.10: no top-bar clause (dungeon torches / rubble at the top edge were taken for interface)
-                 const bool atCursor=holdingNow&&cursorKnown&&bw<.25f&&bh<.30f&&(bx0+bx1)*.5f>cursorPx-Re&&(bx0+bx1)*.5f<cursorPx+Re&&(by0+by1)*.5f>cursorPy-Re*1.4f&&(by0+by1)*.5f<cursorPy+Re*1.4f;
+                 const bool atCursor=false&&holdingNow&&cursorKnown&&bw<.25f&&bh<.30f&&(bx0+bx1)*.5f>cursorPx-Re&&(bx0+bx1)*.5f<cursorPx+Re&&(by0+by1)*.5f>cursorPy-Re*1.4f&&(by0+by1)*.5f<cursorPy+Re*1.4f;
                  ++o.winDraws;if(inBars||atCursor) ++o.winEdge;}
                 o.box[0]=std::min(o.box[0],bx0/uiW);o.box[1]=std::min(o.box[1],by0/uiH);o.box[2]=std::max(o.box[2],bx1/uiW);o.box[3]=std::max(o.box[3],by1/uiH);
             }
