@@ -73,7 +73,7 @@ void dk2vr_beginStub();
 asm(".text\n.globl _dk2vr_beginStub\n_dk2vr_beginStub:\n\tmovl %esp,%eax\n\tpushl %eax\n\tcall _dk2vr_beginNote\n\taddl $4,%esp\n\tjmp *_dk2vr_beginTramp\n");
 
 namespace {
-constexpr const char* Version="0.8.11";
+constexpr const char* Version="0.8.12";
 std::filesystem::path configurationPath() {
     wchar_t module[MAX_PATH]{};GetModuleFileNameW(nullptr,module,MAX_PATH);
     return std::filesystem::path(module).parent_path().parent_path()/L"DK2VR.ini";
@@ -1742,7 +1742,7 @@ struct Renderer {
     std::vector<Vec3> positions;
     // 0.8.0: triangle split of the 3D draws by engine origin (interface / dungeon).
     std::vector<uint8_t> originFlags;std::vector<uint32_t> originUi,originWorld,originRemap;std::vector<unsigned char> originUiVerts,originUiIdx,originWorldIdx;
-    int smallLogs=0,smallLogsFrame=0;bool f11Down=false,uiDumpPending=false;int uiDumpCount=0;uint64_t statHeldPieces=0,statButtonRect=0,statOriginUi=0,statOriginMixed=0,statOriginUiTris=0,statOriginWorldTris=0,statOriginWorld=0,statOriginUntagged=0;
+    int smallLogs=0,smallLogsFrame=0;bool f11Down=false,uiDumpPending=false;int uiDumpCount=0;float rhwWorldEma=0;uint64_t statHeldPieces=0,statButtonRect=0,statOriginUi=0,statOriginMixed=0,statOriginUiTris=0,statOriginWorldTris=0,statOriginWorld=0,statOriginUntagged=0;
     // 0.3.0 decoupled rendering (DecoupledRendering=1). 0 = the 0.2.9 path, which also stays in use for
     // menus, possession and the flat-screen mode.
     bool decoupledEnabled=true,decoupledFrame=false,frameOpen=false,lastAnchored=false;
@@ -2520,16 +2520,20 @@ struct Renderer {
                     log("Small draw near the bars: n=%u prim=%u type=%d box %.3f,%.3f-%.3f,%.3f rhw %.3f-%.3f setup %06X tagged=%d",count,primitives,int(type),x0,y0,x1,y1,rmin,rmax,r0,int(marked>0));
                 }
             }
-            // 0.8.8: the 3D buttons '0' / 'i' of the bottom bars (24-256 vertices; boxes measured in the 0.7.10 report: x .427-.506 y .761-.866 and
-            // x .520-.554 y .792-.886; 0.8.7 looked for 4-8 vertices in a too small rectangle: it kept dungeon quads and missed the buttons) are drawn by the same engine code as the dungeon creatures: no origin rule can find them.
-            // Whatever is that small and lies ENTIRELY in that rectangle is interface (never terrain code). Nothing else is added:
-            // 0.8.6 (whole bars / cursor rules) removed dungeon pieces from the table.
-            if(!uiVerts&&count>=24&&count<=256&&uiW>0&&uiH>0) {
+            // 0.8.12: the 3D buttons / portraits / cards of the bars sit on a FIXED plane in front of the camera (rhw .38-.50 in every report:
+            // n=195 .379-.441, n=104 .381-.427, n=192 .379-.418, n=37 .400-.452 ...), while the dungeon's rhw follows the zoom (.08-.31 in the
+            // 0.8.9 / 0.8.10 reports). That is why the buttons came and went with the zoom. A draw that is small, lies on the lower half of the
+            // screen and has ALL its vertices at rhw >= .36 (and at least 1.6 x the running dungeon rhw) is interface; never terrain code.
+            if(!uiVerts&&count<=1500&&uiW>0&&uiH>0) {
+                float rmin=1e9f,rmax=-1e9f,rsum=0;
+                for(UINT i=0;i<count;++i) {float r;memcpy(&r,input+size_t(i)*stride+12,4);rmin=std::min(rmin,r);rmax=std::max(rmax,r);rsum+=r;}
                 bool terrain=false;
                 if(firstId>0&&firstId<256) {const uint32_t r=EngineOrigin::origins[firstId].ret0-uint32_t(EngineOrigin::k);terrain=(r>=0x587600&&r<0x587700)||(r>=0x588500&&r<0x588600);}
-                const float ihe=std::min(float(uiH),uiW*.75f),iwe=std::min(float(uiW),uiH*4.f/3.f),oye=(uiH-ihe)*.5f,oxe=(uiW-iwe)*.5f;
-                const float x0=(bx0-oxe)/iwe,x1=(bx1-oxe)/iwe,y0=(by0-oye)/ihe,y1=(by1-oye)/ihe;
-                if(!terrain&&x1-x0<=.10f&&y1-y0<=.13f&&x0>=.405f&&x1<=.575f&&y0>=.745f&&y1<=.90f) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statButtonRect;}
+                const float ihe=std::min(float(uiH),uiW*.75f),iwe=std::min(float(uiW),uiH*4.f/3.f),oye=(uiH-ihe)*.5f;
+                const float y0=(by0-oye)/ihe,y1=(by1-oye)/ihe,cyy=(y0+y1)*.5f,bwf=(bx1-bx0)/iwe,bhf=y1-y0;
+                const bool plane=rmin>=.36f&&rmax<=.55f&&(rhwWorldEma<=0||rmin>=1.6f*rhwWorldEma);
+                if(plane&&!terrain&&cyy>=.60f&&bwf<.35f&&bhf<.25f) {std::fill(originFlags.begin(),originFlags.end(),uint8_t(1));uiVerts=count;++statButtonRect;}
+                else if(rmax<.34f&&count>=40) rhwWorldEma=rhwWorldEma>0?rhwWorldEma+.02f*(rsum/count-rhwWorldEma):rsum/count;
             }
             auto at=[&](UINT n)->uint32_t{return !indices?uint32_t(n):indexFormat==D3DFMT_INDEX32?static_cast<const uint32_t*>(indices)[n]:uint32_t(static_cast<const uint16_t*>(indices)[n]);};
             const bool triangles=type==D3DPT_TRIANGLELIST||type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLEFAN;
