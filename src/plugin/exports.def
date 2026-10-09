@@ -1,6 +1,0 @@
-LIBRARY DK2VR
-EXPORTS
-    DK2VR_Draw
-    DK2VR_Present
-    DK2VR_Reset
-    DK2VR_Adapter
