@@ -4,7 +4,7 @@
 
 **Play Dungeon Keeper 2 in virtual reality — a fan-made OpenXR mod.**
 
-*Made by LoVeMaKeRz* · Version **0.9.47.63** (public) · [Français](README.fr.md)
+*Made by LoVeMaKeRz* · Version **0.9.47.63** (public)
 
 [![Watch the demo on YouTube](https://img.youtube.com/vi/0tBOKbF9qJE/maxresdefault.jpg)](https://youtu.be/0tBOKbF9qJE)
 
