@@ -1,0 +1,164 @@
+// made by LoVeMaKeRz
+
+#include <vector>
+#include <unordered_map>
+#include <map>
+#include <cstdint>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+typedef unsigned UINT;typedef unsigned long DWORD;
+enum D3DPRIMITIVETYPE{D3DPT_TRIANGLELIST=4,D3DPT_TRIANGLESTRIP=5,D3DPT_TRIANGLEFAN=6};
+enum D3DFORMAT{D3DFMT_INDEX16=101,D3DFMT_INDEX32=102};
+#define D3DFVF_XYZRHW 0x4
+#define D3DFVF_POSITION_MASK 0x400E
+#define D3DFVF_NORMAL 0x10
+#define D3DFVF_PSIZE 0x20
+#define D3DFVF_DIFFUSE 0x40
+#define D3DFVF_SPECULAR 0x80
+#define D3DFVF_TEXCOUNT_MASK 0xf00
+#define D3DFVF_TEXCOUNT_SHIFT 8
+struct Vec3{float x,y,z;};struct Projection{float focalX,focalY,centerX,centerY;};
+const float MenuRefDepth=1.1f;
+float menuDepthK=.45f,menuFarK=2.f,menuNearK=.15f,menuEdge=.28f,menuEdgeMin=.35f,menuTessPx=16.f,menuTessTol=.0012f/1.36f,menuTessTolRel=.04f,menuOrderK=.06f;bool menuTessLogged=true;
+static size_t indexCountFor(D3DPRIMITIVETYPE t,UINT p){return t==D3DPT_TRIANGLELIST?p*3:p+2;}
+static void log(const char*,...){}
+static double milliseconds(){return 0;}
+    Vec3 menuPos(float x,float y,float rhw,const Projection& lens) {
+        const float dTrue=1.f/std::max(rhw,1e-4f);
+        float depth=dTrue>=MenuRefDepth?MenuRefDepth+menuFarK*(1.f-std::exp(-menuDepthK*(dTrue-MenuRefDepth)/menuFarK))
+                                       :MenuRefDepth-menuNearK*(1.f-std::exp(-menuDepthK*(MenuRefDepth-dTrue)/menuNearK));
+        if(dTrue<MenuRefDepth) depth-=menuOrderK*(MenuRefDepth-dTrue);
+        float fade=1.f;
+        if(menuEdge>0.f) {
+            const float w2=lens.centerX*2.f,h2=lens.centerY*2.f,m=menuEdge*w2;
+            const float e=std::min(std::min(x,w2-x),std::min(y,h2-y));
+            const float t=std::min(1.f,std::max(0.f,e/m));fade=menuEdgeMin+(1.f-menuEdgeMin)*(t*t*(3.f-2.f*t));   // never 0: at 0 every surface of the band lands on one plane
+        }
+        const float depthF=MenuRefDepth+(depth-MenuRefDepth)*fade;
+        return {(x-lens.centerX)*depthF/lens.focalX,-(y-lens.centerY)*depthF/lens.focalY,-depthF};
+    }
+
+struct V{float x,y,z,w;uint32_t c;float u,v;};
+int run(const char* name,std::vector<V> vs,int G,bool idx){
+ Projection lens{492,492,320,240};
+ std::vector<uint16_t> ix;std::vector<V> flat;
+ for(int j=0;j<G;++j)for(int i=0;i<G;++i){int a=j*(G+1)+i,b=a+1,c=a+G+1,d=c+1;int t[6]={a,b,c,b,d,c};for(int k:t){ix.push_back(k);flat.push_back(vs[k]);}}
+ D3DPRIMITIVETYPE type=D3DPT_TRIANGLELIST;UINT primitives=G*G*2;DWORD fvf=D3DFVF_XYZRHW|D3DFVF_DIFFUSE|0x100;UINT stride=28;
+ const void* verts=idx?(const void*)vs.data():(const void*)flat.data();const void* indices=idx?(const void*)ix.data():nullptr;D3DFORMAT indexFormat=D3DFMT_INDEX16;
+ UINT count=idx?vs.size():0;UINT n=count;if(!indices) n=primitives*3;
+        static thread_local std::vector<unsigned char> tessVerts,tessNew;static thread_local std::vector<uint32_t> tessTri,tessOut;static thread_local std::vector<uint16_t> tessOut16;
+        static thread_local std::unordered_map<uint64_t,uint32_t> tessMid;
+        const double tessT0=milliseconds();bool tessApplied=false;   // 0.8.99.12: no cache (report 141824: 85 % of the draws change every frame, the camera of the menu moves)
+        if(menuTessPx>=4.f&&menuEdge>0.f) {
+            const bool hasD=(fvf&D3DFVF_DIFFUSE)!=0,hasS=(fvf&D3DFVF_SPECULAR)!=0;const UINT texN=(fvf&D3DFVF_TEXCOUNT_MASK)>>D3DFVF_TEXCOUNT_SHIFT;
+            const bool texSimple=((fvf>>16)&0xFFFF)==0;
+            if(texSimple&&texN<=4&&stride<=128&&stride==16u+(hasD?4u:0u)+(hasS?4u:0u)+8u*texN&&(fvf&(D3DFVF_POSITION_MASK|D3DFVF_NORMAL|D3DFVF_PSIZE))==D3DFVF_XYZRHW) {
+                const auto* src=static_cast<const unsigned char*>(verts);
+                const UINT idxCount=indices?UINT(indexCountFor(type,primitives)):0;
+                std::vector<uint32_t>& tri=tessTri;tri.clear();bool bad=false;
+                auto idxAt=[&](UINT k)->uint32_t {if(!indices) return k;return indexFormat==D3DFMT_INDEX32?static_cast<const uint32_t*>(indices)[k]:uint32_t(static_cast<const uint16_t*>(indices)[k]);};
+                const UINT lim=indices?idxCount:n;
+                for(UINT p=0;p<primitives&&!bad;++p) {
+                    UINT k0,k1,k2;
+                    if(type==D3DPT_TRIANGLELIST) {k0=p*3;k1=p*3+1;k2=p*3+2;}
+                    else if(type==D3DPT_TRIANGLESTRIP) {if(p&1) {k0=p+1;k1=p;k2=p+2;} else {k0=p;k1=p+1;k2=p+2;}}
+                    else {k0=0;k1=p+1;k2=p+2;}
+                    if(k0>=lim||k1>=lim||k2>=lim) {bad=true;break;}
+                    const uint32_t a0=idxAt(k0),a1=idxAt(k1),a2=idxAt(k2);
+                    if(a0>=n||a1>=n||a2>=n) {bad=true;break;}
+                    tri.push_back(a0);tri.push_back(a1);tri.push_back(a2);
+                }
+                for(size_t q=0;q<tri.size()&&!bad;++q) {float t4[4];memcpy(t4,src+size_t(tri[q])*stride,16);if(!std::isfinite(t4[0])||!std::isfinite(t4[1])||!std::isfinite(t4[3])||std::fabs(t4[0])>1e5f||std::fabs(t4[1])>1e5f) bad=true;}
+                const float bw2=lens.centerX*2.f,bh2=lens.centerY*2.f,band=menuEdge*bw2,lim2=menuTessPx*menuTessPx;
+                std::vector<unsigned char>& pool=tessNew;pool.clear();   // midpoints only (numbers n, n+1, ...); the originals are read in place
+                auto P=[&](uint32_t k)->const unsigned char* {return k<n?src+size_t(k)*stride:pool.data()+size_t(k-n)*stride;};
+                auto inBandPt=[&](uint32_t k) {float q[2];memcpy(q,P(k),8);return std::min(std::min(q[0],bw2-q[0]),std::min(q[1],bh2-q[1]))<band;};
+                // 0.8.99.12: an edge is cut iff one of its ends lies in the band AND it is longer than the minimum piece AND its straight middle is more than
+                // menuTessTol away from where the relief really puts that point (exact test, end points only: neighbours still decide alike, no crack).
+                // Before: every long edge of the band was cut (100 draws cut per frame, 1.2-2.9 ms per game frame, more triangles in every eye).
+                const float tol2=menuTessTol*menuTessTol;
+                auto cutEdge=[&](uint32_t a,uint32_t b) {
+                    float fa[4],fb[4];memcpy(fa,P(a),16);memcpy(fb,P(b),16);const float dx=fa[0]-fb[0],dy=fa[1]-fb[1];
+                    if(dx*dx+dy*dy<=lim2||!(inBandPt(a)||inBandPt(b))) return false;
+                    const Vec3 pa=menuPos(fa[0],fa[1],fa[3],lens),pb=menuPos(fb[0],fb[1],fb[3],lens);
+                    const Vec3 pm=menuPos(.5f*(fa[0]+fb[0]),.5f*(fa[1]+fb[1]),.5f*(fa[3]+fb[3]),lens);   // screen middle, rhw linear in screen = the true middle point
+                    const float ex=pm.x-.5f*(pa.x+pb.x),ey=pm.y-.5f*(pa.y+pb.y),ez=pm.z-.5f*(pa.z+pb.z);
+                    const float rel=menuTessTolRel*std::max(0.f,-pm.z-MenuRefDepth);   // BEHIND the wall plane (far content) a few mm are invisible: the tolerance grows with the depth there; in front (near rim, floor under the camera) the strict tolerance stays
+                    return ex*ex+ey*ey+ez*ez>tol2+rel*rel;};
+                bool need=false;
+                if(!bad&&!tri.empty()) {
+                    for(size_t q=0;q+2<tri.size()&&!need;q+=3) need=cutEdge(tri[q],tri[q+1])||cutEdge(tri[q+1],tri[q+2])||cutEdge(tri[q+2],tri[q]);
+                }
+                if(need) {
+                    tessMid.clear();std::vector<uint32_t>& out=tessOut;out.clear();
+                    // midpoint of the SAME edge = the same vertex (key: sorted end numbers); its value is symmetric in (a,b) anyway (identical for duplicated vertices)
+                    auto mid=[&](uint32_t ka,uint32_t kb)->uint32_t {
+                        const uint64_t key=ka<kb?(uint64_t(ka)<<32|kb):(uint64_t(kb)<<32|ka);
+                        auto it=tessMid.find(key);if(it!=tessMid.end()) return it->second;
+                        unsigned char A[128],B[128],o[128];memcpy(A,P(std::min(ka,kb)),stride);memcpy(B,P(std::max(ka,kb)),stride);
+                        float fa[4],fb[4],fo[4];memcpy(fa,A,16);memcpy(fb,B,16);
+                        for(int j=0;j<4;++j) fo[j]=.5f*(fa[j]+fb[j]);memcpy(o,fo,16);
+                        UINT off=16;
+                        for(UINT j=0;j<(hasD?1u:0u)+(hasS?1u:0u);++j,off+=4) for(int c=0;c<4;++c) o[off+c]=(unsigned char)((unsigned(A[off+c])+unsigned(B[off+c])+1u)/2u);
+                        const float wsum=fa[3]+fb[3];
+                        for(UINT j=0;j<texN;++j,off+=8) for(int c=0;c<2;++c) {
+                            float ua,ub;memcpy(&ua,A+off+c*4,4);memcpy(&ub,B+off+c*4,4);
+                            const float u=wsum>1e-12f?(ua*fa[3]+ub*fb[3])/wsum:.5f*(ua+ub);memcpy(o+off+c*4,&u,4);   // perspective-correct
+                        }
+                        const uint32_t id=n+uint32_t(pool.size()/stride);pool.insert(pool.end(),o,o+stride);tessMid.emplace(key,id);return id;
+                    };
+                    struct T3 {uint32_t a,b,c;int depth;};
+                    static thread_local std::vector<T3> stack;stack.clear();
+                    for(size_t q=0;q+2<tri.size();q+=3) stack.push_back({tri[q],tri[q+1],tri[q+2],0});
+                    const size_t maxTris=60000;
+                    while(!stack.empty()) {
+                        const T3 t=stack.back();stack.pop_back();
+                        const bool big=t.depth<8&&out.size()/3+stack.size()<maxTris;
+                        const bool cab=big&&cutEdge(t.a,t.b),cbc=big&&cutEdge(t.b,t.c),cca=big&&cutEdge(t.c,t.a);
+                        const int nc=int(cab)+int(cbc)+int(cca);const int dd=t.depth+1;
+                        if(nc==0) {out.push_back(t.a);out.push_back(t.b);out.push_back(t.c);continue;}
+                        if(nc==3) {const uint32_t m1=mid(t.a,t.b),m2=mid(t.b,t.c),m3=mid(t.c,t.a);
+                            stack.push_back({t.a,m1,m3,dd});stack.push_back({m1,t.b,m2,dd});stack.push_back({m3,m2,t.c,dd});stack.push_back({m1,m2,m3,dd});continue;}
+                        // rotate so that the cut edges come first: (x,y,z) with x-y cut (and y-z cut when two)
+                        uint32_t x=t.a,y=t.b,z=t.c;
+                        if(nc==1) {if(cbc) {x=t.b;y=t.c;z=t.a;} else if(cca) {x=t.c;y=t.a;z=t.b;}
+                            const uint32_t m=mid(x,y);stack.push_back({x,m,z,dd});stack.push_back({m,y,z,dd});continue;}
+                        if(!cca) {x=t.a;y=t.b;z=t.c;} else if(!cab) {x=t.b;y=t.c;z=t.a;} else {x=t.c;y=t.a;z=t.b;}   // cut: x-y and y-z
+                        const uint32_t m1=mid(x,y),m2=mid(y,z);
+                        stack.push_back({m1,y,m2,dd});stack.push_back({x,m1,m2,dd});stack.push_back({x,m2,z,dd});
+                    }
+                    const uint32_t nv=n+uint32_t(pool.size()/stride);
+                    if(out.size()>=3&&nv>0) {
+                        tessApplied=true;tessVerts.assign(src,src+size_t(n)*stride);tessVerts.insert(tessVerts.end(),pool.begin(),pool.end());verts=tessVerts.data();n=nv;primitives=UINT(out.size()/3);type=D3DPT_TRIANGLELIST;
+                        if(nv<=65535) {tessOut16.assign(out.begin(),out.end());indices=tessOut16.data();indexFormat=D3DFMT_INDEX16;}
+                        else {indices=out.data();indexFormat=D3DFMT_INDEX32;}
+                        if(!menuTessLogged) {menuTessLogged=true;log("Menu relief (0.8.99.12): adaptive crack-free tessellation on (pieces >= %.0f px, indexed), first draw %u -> %u triangles, %u -> %u vertices",menuTessPx,unsigned(tri.size()/3),unsigned(out.size()/3),unsigned(count?count:tri.size()),unsigned(nv));}
+                    }
+                }
+            }
+        }
+ auto VP=[&](uint32_t k){const float* f=(const float*)((const unsigned char*)verts+size_t(k)*stride);return std::make_pair(f[0],f[1]);};
+ std::map<std::pair<std::pair<float,float>,std::pair<float,float>>,int> E;
+ for(UINT t=0;t<primitives;++t){uint32_t k[3];for(int q=0;q<3;++q){UINT ii=t*3+q;k[q]=indices?(indexFormat==D3DFMT_INDEX32?((const uint32_t*)indices)[ii]:((const uint16_t*)indices)[ii]):ii;}
+  for(int q=0;q<3;++q){auto A=VP(k[q]),B=VP(k[(q+1)%3]);if(B<A)std::swap(A,B);E[{A,B}]++;}}
+ // border edges = edges of the original outer boundary: count edges used once that are not on it
+ std::vector<V> o=vs;auto onB=[&](std::pair<float,float> A,std::pair<float,float> B){
+   auto P=[&](int i,int j){return std::make_pair(o[j*(G+1)+i].x,o[j*(G+1)+i].y);};
+   for(int s=0;s<4;++s){std::pair<float,float> p0,p1; if(s==0){p0=P(0,0);p1=P(G,0);} if(s==1){p0=P(G,0);p1=P(G,G);} if(s==2){p0=P(0,G);p1=P(G,G);} if(s==3){p0=P(0,0);p1=P(0,G);}
+     auto cr=[&](std::pair<float,float> q){return std::fabs((p1.first-p0.first)*(q.second-p0.second)-(p1.second-p0.second)*(q.first-p0.first));};
+     float L=std::hypot(p1.first-p0.first,p1.second-p0.second);if(cr(A)/L<1e-2&&cr(B)/L<1e-2)return true;}return false;};
+ int bad=0;for(auto& e:E) if(e.second!=2&&!onB(e.first.first,e.first.second))++bad;
+ printf("%-28s idx=%d: tris %u -> %u, verts %u, cut=%d, T-junction edges %d\n",name,idx,G*G*2,primitives,n,int(tessApplied),bad);return bad;}
+std::vector<V> floorGrid(int G,float y0,float z0,float z1,float x0,float x1){std::vector<V> v;
+ for(int j=0;j<=G;++j)for(int i=0;i<=G;++i){float X=x0+(x1-x0)*i/G,Z=z0+(z1-z0)*j/G;float sx=320+492*X/Z,sy=240-492*y0/Z;v.push_back({sx,sy,.5f,1.f/Z,0xff808080u,X,Z});}return v;}
+std::vector<V> wallGrid(int G,float Z,float x0,float x1,float y0,float y1){std::vector<V> v;
+ for(int j=0;j<=G;++j)for(int i=0;i<=G;++i){float X=x0+(x1-x0)*i/G,Y=y0+(y1-y0)*j/G;v.push_back({320+492*X/Z,240-492*Y/Z,.5f,1.f/Z,0xff808080u,X,Y});}return v;}
+int main(){int b=0;
+ b+=run("near floor (rim, bottom)",floorGrid(4,-.35f,.12f,.6f,-.6f,.6f),4,true);
+ b+=run("receding floor",floorGrid(6,-.5f,.4f,4.f,-2.f,2.f),6,true);
+ b+=run("receding floor non-indexed",floorGrid(3,-.5f,.4f,4.f,-2.f,2.f),3,false);
+ b+=run("flat back wall at Ref",wallGrid(4,1.1f,-1.6f,1.6f,-1.2f,1.2f),4,true);
+ b+=run("far wall",wallGrid(4,5.f,-6.f,6.f,-5.f,5.f),4,true);
+ return b?1:0;}
