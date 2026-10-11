@@ -22,15 +22,14 @@ The game itself is **not modified**: `DKII-DX.exe` is never touched, and the gam
 
 ### Features
 
-- 🏰 The dungeon on a table, with grab / turn / zoom / table-size controls
-- 👁️ First-person **possession with a 360° view** (cube-map rendering done by the game itself)
-- 🗡️ Creature skills shown in VR — cycle with **A / B**, attack with the trigger
-- ✋ Held creatures shown in real **3D**
-- 🔢 Damage numbers rendered upright, readable from any angle
-- ⌨️ Virtual **VR keyboard** (to name your saves)
-- 🧱 In-world **OPTIONS** and **CONTROLS** panels on the walls (English / Français)
-- 🎥 **PC mirror window** for streamers (OBS / Streamlabs window capture)
-- 🔄 Safe install, one-click update, and restore scripts
+- The dungeon on a table, with grab / turn / zoom / table-size controls
+- First-person **possession with a 360° view** (cube-map rendering done by the game itself)
+- Creature skills shown in VR — cycle with **A / B**, attack with the trigger
+- Held creatures shown in real **3D**
+- Damage numbers rendered upright, readable from any angle
+- Virtual **VR keyboard** (to name your saves)
+- In-world **OPTIONS** and **CONTROLS** panels on the walls (English / Français)
+- Safe install, one-click update, and restore scripts
 
 ## Requirements
 
@@ -43,10 +42,12 @@ The game itself is **not modified**: `DKII-DX.exe` is never touched, and the gam
 > **If you change the game's resolution in its options, quit the game and start it again.**
 > The mod adapts to the resolution at startup; without a restart, selection lines and the interface are drawn wrongly.
 
-## Install (2 minutes)
+## Install (2 minutes) ( RUNTIME : OPENXR )
+Manual: Copy the DK2VR folder & DKII_VR.cmd into your Dungeon Keeper 2 folder, and launch DKII_VR.cmd
 
+Automatic:
 1. Download the latest ZIP from the [**Releases**](https://github.com/lovemakerz/Dungeon-Keeper-2-VR-MOD/releases) page and extract it into a **separate** folder (not the game folder).
-2. Close the game, then double-click **`INSTALLER_MISE_A_JOUR.cmd`** ("mise à jour" = update). It finds the game (Steam default folders) or asks you to pick the folder containing `DKII-DX.exe`. Accept the administrator prompt if Windows shows one.
+2. Close the game, then double-click **`INSTALLER.cmd`**. It finds the game (Steam default folders) or asks you to pick the folder containing `DKII-DX.exe`. Accept the administrator prompt if Windows shows one.
 3. Start Virtual Desktop (or your OpenXR runtime), put the headset on, and run **`DKII_VR.cmd`** from the game folder.
 
 Your settings and saves are kept on every update. Each update backs up the files it replaces in `DK2VR\_mises_a_jour`.
