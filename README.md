@@ -34,7 +34,8 @@ The game itself is **not modified**: `DKII-DX.exe` is never touched, and the gam
 ## Requirements
 
 - Windows 10 / 11 (64-bit) — nothing else to install (PowerShell is built in)
-- **Your own copy of Dungeon Keeper 2, version 1.70** (not included). The installer checks the exact `DKII-DX.exe`; if it is another version, nothing is changed.
+- **Your own copy of Dungeon Keeper 2, version 1.70** (not included) Developed on STEAM version ( https://store.steampowered.com/app/2616460/Dungeon_Keeper_2/ ) .
+The installer checks the exact `DKII-DX.exe`; if it is another version, nothing is changed.
 - A VR headset with an **OpenXR** runtime. Developed and validated on a **Meta Quest 3 through Virtual Desktop**. Other headsets / runtimes: not tested.
 - A PC able to run the game and VR at the same time
 
